@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Search, SlidersHorizontal, LibraryBig, ArrowDownUp, RefreshCw } from 'lucide-react'
+import { Search, SlidersHorizontal, LibraryBig, ArrowDownUp, RefreshCw, Server } from 'lucide-react'
 import PublicLayout from '../../layouts/PublicLayout'
 import BookCard from '../../components/BookCard'
 import Spinner from '../../components/ui/Spinner'
 import EmptyState from '../../components/ui/EmptyState'
 import Pagination from '../../components/ui/Pagination'
 import Select from '../../components/ui/Select'
+import ServerConnectionModal from '../../components/ServerConnectionModal'
 import { useAppStore } from '../../stores/app'
 import type { Book, BookFilters, CategoryListItem } from '@shared/types'
 import { errorMessage } from '../../lib/utils'
@@ -36,6 +37,7 @@ export default function Home() {
   const [totalPages, setTotalPages] = useState(1)
   const [categories, setCategories] = useState<CategoryListItem[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [connOpen, setConnOpen] = useState(false)
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -232,14 +234,30 @@ export default function Home() {
               title="Connecting to Library..."
               description="Waiting for the library server to respond. Retrying automatically..."
             />
-            <button
-              type="button"
-              onClick={() => triggerRefresh()}
-              className="ring-focus mt-4 inline-flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-xs font-semibold text-white shadow-card transition-colors hover:bg-primary-700 active:scale-95"
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              <span>Retry Now</span>
-            </button>
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => triggerRefresh()}
+                className="ring-focus inline-flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-xs font-semibold text-white shadow-card transition-colors hover:bg-primary-700 active:scale-95"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>Retry Now</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setConnOpen(true)}
+                className="ring-focus inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-surface px-5 py-2.5 text-xs font-semibold text-foreground shadow-card transition-colors hover:bg-slate-50 active:scale-95"
+              >
+                <Server className="h-3.5 w-3.5 text-primary-600" />
+                <span>Configure Server URL</span>
+              </button>
+            </div>
+            <ServerConnectionModal
+              open={connOpen}
+              onClose={() => setConnOpen(false)}
+              isAdmin={false}
+              onConnected={() => triggerRefresh()}
+            />
           </div>
         ) : loading ? (
           <Spinner label="Loading books..." full />

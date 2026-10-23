@@ -1,4 +1,4 @@
-import type { Repositories } from '../database/pg/repositories'
+import type { MongoRepositories as Repositories } from '../database/mongo/repositories'
 import type { SettingsMap } from '@shared/types'
 import { logger } from '../utils/logger'
 

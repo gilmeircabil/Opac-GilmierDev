@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs'
-import type { Repositories } from '../database/pg/repositories'
+import type { MongoRepositories as Repositories } from '../database/mongo/repositories'
 import type { AdminUser, CreateAdminInput } from '@shared/types'
 import { DEVELOPER_RECOVERY_PIN } from '@shared/constants'
 import { logger } from '../utils/logger'

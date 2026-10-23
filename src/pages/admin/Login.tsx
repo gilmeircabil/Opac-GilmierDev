@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
-import { KeyRound, UserRound, Eye, EyeOff, ShieldCheck, LibraryBig, Key, CheckCircle2 } from 'lucide-react'
+import { KeyRound, UserRound, Eye, EyeOff, ShieldCheck, LibraryBig, Key, CheckCircle2, Database } from 'lucide-react'
 import { useAppStore } from '../../stores/app'
 import Input from '../../components/ui/Input'
 import Button from '../../components/ui/Button'
 import Modal from '../../components/ui/Modal'
 import Spinner from '../../components/ui/Spinner'
+import ServerConnectionModal from '../../components/ServerConnectionModal'
 import { imageUrl, errorMessage } from '../../lib/utils'
 
 export default function Login() {
@@ -40,13 +41,21 @@ export default function Login() {
   const [forgotBusy, setForgotBusy] = useState(false)
   const [forgotError, setForgotError] = useState<string | null>(null)
   const [forgotSuccess, setForgotSuccess] = useState<string | null>(null)
+  const [connModalOpen, setConnModalOpen] = useState(false)
 
-  useEffect(() => {
+  const checkSetupMode = () => {
     void window.api.auth
       .needsSetup()
-      .then((needsSetup) => setMode(needsSetup ? 'setup' : 'login'))
+      .then((needsSetup) => {
+        setMode(needsSetup ? 'setup' : 'login')
+        setError(null)
+      })
       .catch(() => setMode('login'))
       .finally(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    checkSetupMode()
   }, [])
 
   const logo = imageUrl(settings.library_logo)
@@ -231,11 +240,26 @@ export default function Login() {
           </Button>
         </form>
 
-        <p className="mt-4 text-center text-xs text-muted">
+        <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-muted">
           <Link to="/catalog" className="ring-focus inline-flex items-center gap-1.5 hover:text-foreground">
             <LibraryBig className="h-3.5 w-3.5 text-primary-500" /> View public catalog
           </Link>
-        </p>
+          <span>·</span>
+          <button
+            type="button"
+            onClick={() => setConnModalOpen(true)}
+            className="ring-focus inline-flex items-center gap-1.5 font-medium text-primary-600 hover:underline dark:text-primary-400"
+          >
+            <Database className="h-3.5 w-3.5" /> MongoDB / Remote Server
+          </button>
+        </div>
+
+        <ServerConnectionModal
+          open={connModalOpen}
+          onClose={() => setConnModalOpen(false)}
+          isAdmin
+          onConnected={checkSetupMode}
+        />
 
         <Modal
           open={forgotOpen}

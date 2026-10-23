@@ -82,16 +82,26 @@ export async function bootstrapApp(): Promise<void> {
         // Server might be starting up; will retry on refresh
       }
     } else {
-      const session = await window.api.auth.session()
-      store.setUser(session)
-      const settings = await window.api.settings.getAll()
-      store.setSettings(settings)
-      applyTheme(settings.theme)
+      const connection = await window.api.connection.get().catch(() => null)
+      if (connection) store.setConnection(connection)
+      try {
+        const session = await window.api.auth.session()
+        store.setUser(session)
+        const settings = await window.api.settings.getAll()
+        store.setSettings(settings)
+        applyTheme(settings.theme)
+      } catch {
+        // Server or MongoDB may need configuration on the Login screen
+      }
 
       window.api.onSessionChanged(() => {
         void (async () => {
-          const s = await window.api.auth.session()
-          useAppStore.getState().setUser(s)
+          try {
+            const s = await window.api.auth.session()
+            useAppStore.getState().setUser(s)
+          } catch {
+            // ignore
+          }
         })()
       })
     }

@@ -1,8 +1,9 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { LibraryBig, Lock, X, BookMarked, RefreshCw } from 'lucide-react'
+import { LibraryBig, Lock, X, BookMarked, RefreshCw, Server } from 'lucide-react'
 import { useAppStore } from '../stores/app'
 import { imageUrl } from '../lib/utils'
+import ServerConnectionModal from '../components/ServerConnectionModal'
 
 interface PublicLayoutProps {
   children: ReactNode
@@ -17,6 +18,7 @@ export default function PublicLayout({ children, showBack = false }: PublicLayou
   const location = useLocation()
   const isUser = mode === 'user'
   const [refreshing, setRefreshing] = useState(false)
+  const [connOpen, setConnOpen] = useState(false)
 
   const handleRefresh = async () => {
     setRefreshing(true)
@@ -68,6 +70,15 @@ export default function PublicLayout({ children, showBack = false }: PublicLayou
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => setConnOpen(true)}
+                  className="inline-flex items-center gap-1.5 rounded border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground hover:bg-slate-50"
+                  title="Configure Library Server URL"
+                >
+                  <Server className="h-3.5 w-3.5 text-primary-600" />
+                  <span>Server</span>
+                </button>
+                <button
+                  type="button"
                   onClick={handleRefresh}
                   disabled={refreshing}
                   className="inline-flex items-center gap-1.5 rounded border border-border bg-surface px-3 py-2 text-xs font-semibold text-foreground disabled:opacity-60"
@@ -91,6 +102,12 @@ export default function PublicLayout({ children, showBack = false }: PublicLayou
         </div>
       </header>
       <main className="flex-1">{children}</main>
+      <ServerConnectionModal
+        open={connOpen}
+        onClose={() => setConnOpen(false)}
+        isAdmin={false}
+        onConnected={() => void handleRefresh()}
+      />
       {isUser && (
         <footer className="border-t border-slate-200 dark:border-slate-700">
           <p className="mx-auto flex max-w-7xl items-center justify-center gap-2 px-4 py-4 text-center text-xs text-muted sm:px-6">

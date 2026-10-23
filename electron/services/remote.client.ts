@@ -5,8 +5,20 @@ export interface RemoteEndpoint {
 }
 
 export function apiBaseUrl(config: ConnectionConfig): string {
-  const host = config.host.trim().replace(/^https?:\/\//, '')
-  return `http://${host}:${config.port}`
+  const raw = config.host.trim().replace(/\/+$/, '')
+  if (/^https?:\/\//i.test(raw)) {
+    try {
+      const url = new URL(raw)
+      if (!url.port && config.port && config.port !== 80 && config.port !== 443 && (url.hostname === '127.0.0.1' || url.hostname === 'localhost' || /^\d+\.\d+\.\d+\.\d+$/.test(url.hostname))) {
+        url.port = String(config.port)
+      }
+      return url.toString().replace(/\/+$/, '')
+    } catch {
+      return raw
+    }
+  }
+  const portPart = config.port ? `:${config.port}` : ''
+  return `http://${raw}${portPart}`
 }
 
 export function remoteClient(getConfig: () => ConnectionConfig | null): RemoteEndpoint {
@@ -17,7 +29,7 @@ export function remoteClient(getConfig: () => ConnectionConfig | null): RemoteEn
         throw new Error('No library server connection configured')
       }
       const controller = new AbortController()
-      const timeout = setTimeout(() => controller.abort(), 10_000)
+      const timeout = setTimeout(() => controller.abort(), 12_000)
       try {
         const headers: Record<string, string> = { ...(init?.headers as Record<string, string>) }
         if (config.token) {

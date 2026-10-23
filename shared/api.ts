@@ -26,6 +26,8 @@ import type {
   ImportSheetPreview,
   ImportTaskInput,
   InstallInfo,
+  MongoConfigInfo,
+  MongoConfigInput,
   NetworkAccessInfo,
   Paginated,
   PublisherInput,
@@ -57,6 +59,9 @@ export const IPC = {
 
   databaseStatus: 'database:status',
   databaseClearCatalog: 'database:clear-catalog',
+  databaseGetMongoConfig: 'database:get-mongo-config',
+  databaseSetMongoConfig: 'database:set-mongo-config',
+  databaseTestMongoUri: 'database:test-mongo-uri',
 
   authNeedsSetup: 'auth:needs-setup',
   authSetup: 'auth:setup',
@@ -98,6 +103,7 @@ export const IPC = {
 
   imagesPickCover: 'images:pick-cover',
   imagesPickLogo: 'images:pick-logo',
+  imagesPickLocalBase64: 'images:pick-local-base64',
   imagesDelete: 'images:delete',
 
   backupCreate: 'backup:create',
@@ -140,6 +146,9 @@ export interface LibraryApi {
   database: {
     status(): Promise<DatabaseStatus>
     clearCatalog(): Promise<void>
+    getMongoConfig(): Promise<MongoConfigInfo>
+    setMongoConfig(input: MongoConfigInput): Promise<{ ok: boolean; error?: string }>
+    testMongoUri(input: MongoConfigInput): Promise<{ ok: boolean; version?: string; error?: string }>
   }
 
   auth: {

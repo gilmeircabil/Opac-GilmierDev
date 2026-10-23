@@ -1,7 +1,5 @@
 import * as XLSX from 'xlsx'
-import type { Db } from '../database/pg/client'
-import type { Repositories } from '../database/pg/repositories'
-import { nowIso } from '../database/pg/repositories/utils'
+import type { MongoRepositories as Repositories } from '../database/mongo/repositories'
 import type {
   ImportColumnMap,
   ImportOptions,
@@ -37,13 +35,30 @@ function asStringRow(row: unknown[]): string[] {
   return row.map(cell)
 }
 
-function parseWorkbook(data: ArrayBuffer | Uint8Array, fileName: string): XLSX.WorkBook {
+function toUint8Array(data: unknown): Uint8Array {
+  if (data instanceof Uint8Array) return data
+  if (data instanceof ArrayBuffer) return new Uint8Array(data)
+  if (typeof data === 'string') return Buffer.from(data, 'base64')
+  if (
+    data &&
+    typeof data === 'object' &&
+    'type' in data &&
+    (data as unknown as { type: string }).type === 'Buffer' &&
+    Array.isArray((data as unknown as { data: number[] }).data)
+  ) {
+    return new Uint8Array((data as unknown as { data: number[] }).data)
+  }
+  if (Array.isArray(data)) return new Uint8Array(data)
+  throw new Error('Invalid file data format')
+}
+
+function parseWorkbook(rawData: unknown, fileName: string): XLSX.WorkBook {
+  const bytes = toUint8Array(rawData)
   if (/\.csv$/i.test(fileName)) {
-    const bytes = data instanceof Uint8Array ? data : new Uint8Array(data)
     const text = new TextDecoder('utf-8').decode(bytes).replace(/^\uFEFF/, '')
     return XLSX.read(text, { type: 'string' })
   }
-  return XLSX.read(data, { type: 'buffer' })
+  return XLSX.read(bytes, { type: 'buffer' })
 }
 
 function toRowArrays(ws: XLSX.WorkSheet): string[][] {
@@ -106,20 +121,24 @@ function valueAt(row: string[], headers: string[], header: string | null): strin
   return row[index] ?? ''
 }
 
-export function bookImportService(db: Db, repo: Repositories): BookImportService {
+export function bookImportService(repo: Repositories): BookImportService {
   async function loadReferenceLists(): Promise<{
     isbns: Set<string>
     authorIds: Map<string, number>
     categoryIds: Map<string, number>
     publisherIds: Map<string, number>
   }> {
-    const [authors, categories, publishers, isbnRows] = await Promise.all([
+    const [authors, categories, publishers, allBooks] = await Promise.all([
       repo.authors.list(true),
       repo.categories.list(true),
       repo.publishers.list(true),
-      db.many<{ isbn: string }>('SELECT lower(isbn) AS isbn FROM books WHERE isbn IS NOT NULL')
+      repo.books.getBookRows({ includeArchived: true })
     ])
-    const isbns = new Set(isbnRows.map((r) => (r.isbn ?? '').normalize('NFKC').toLocaleLowerCase('en-US').trim()))
+    const isbns = new Set(
+      allBooks
+        .map((r) => (r.isbn ?? '').normalize('NFKC').toLocaleLowerCase('en-US').trim())
+        .filter((s) => s.length > 0)
+    )
     return {
       isbns,
       authorIds: new Map(authors.map((a) => [normalize(a.name), a.id])),
@@ -170,114 +189,112 @@ export function bookImportService(db: Db, repo: Repositories): BookImportService
         errors: []
       }
 
-      const ts = nowIso()
+      const resolveNamed = async (
+        table: 'authors' | 'categories' | 'publishers',
+        name: string,
+        ids: Map<string, number>,
+        shouldCreate: boolean
+      ): Promise<number | null> => {
+        const key = normalize(name)
+        if (ids.has(key)) return ids.get(key) ?? null
+        if (!shouldCreate) return null
+        try {
+          const cleanName = name.slice(0, MAX_CELL_LENGTH)
+          let created: { id: number }
+          if (table === 'authors') {
+            created = await repo.authors.create({ name: cleanName })
+          } else if (table === 'categories') {
+            created = await repo.categories.create({ name: cleanName })
+          } else {
+            created = await repo.publishers.create({ name: cleanName })
+          }
+          ids.set(key, created.id)
+          return created.id
+        } catch {
+          return null
+        }
+      }
 
-      await db.tx(async (tx) => {
-        const resolveNamed = async (
-          table: 'authors' | 'categories' | 'publishers',
-          name: string,
-          ids: Map<string, number>,
-          shouldCreate: boolean
-        ): Promise<number | null> => {
-          const key = normalize(name)
-          if (ids.has(key)) return ids.get(key) ?? null
-          if (!shouldCreate) return null
-          const inserted = await tx.one<{ id: number }>(
-            `INSERT INTO ${table} (name, created_at) VALUES ($1, $2) RETURNING id`,
-            [name.slice(0, MAX_CELL_LENGTH), ts]
-          )
-          if (!inserted) return null
-          const id = Number(inserted.id)
-          ids.set(key, id)
-          return id
+      for (let i = 0; i < parsed.rows.length; i++) {
+        const row = parsed.rows[i]
+        const lineNumber = i + 2
+        const title = valueAt(row, headers, map.title)
+        if (!title) {
+          result.errors.push({ row: lineNumber, message: 'Missing title — row skipped' })
+          continue
         }
 
-        for (let i = 0; i < parsed.rows.length; i++) {
-          const row = parsed.rows[i]
-          const lineNumber = i + 2 // 1-based data row (header is row 1)
-          const title = valueAt(row, headers, map.title)
-          if (!title) {
-            result.errors.push({ row: lineNumber, message: 'Missing title — row skipped' })
+        const isbn = valueAt(row, headers, map.isbn)
+        const isbnKey = isbn.normalize('NFKC').toLocaleLowerCase('en-US').trim()
+        const dupKey = `${normalize(title)}|${isbnKey}`
+        if (
+          options.skipDuplicates &&
+          ((isbnKey && refs.isbns.has(isbnKey)) || seenInImport.has(dupKey))
+        ) {
+          result.skippedDuplicates += 1
+          continue
+        }
+
+        let year: number | null = null
+        const yearText = valueAt(row, headers, map.year)
+        if (yearText) {
+          const parsedYear = Number.parseInt(yearText.replace(/[^\d]/g, ''), 10)
+          if (!Number.isInteger(parsedYear) || parsedYear < 0 || parsedYear > 9999) {
+            result.errors.push({ row: lineNumber, title, message: `Invalid year "${yearText}"` })
             continue
           }
+          year = parsedYear
+        }
 
-          const isbn = valueAt(row, headers, map.isbn)
-          const isbnKey = isbn.normalize('NFKC').toLocaleLowerCase('en-US').trim()
-          const dupKey = `${normalize(title)}|${isbnKey}`
-          if (
-            options.skipDuplicates &&
-            ((isbnKey && refs.isbns.has(isbnKey)) || seenInImport.has(dupKey))
-          ) {
-            result.skippedDuplicates += 1
+        let copies = 1
+        const copiesText = valueAt(row, headers, map.copies)
+        if (copiesText) {
+          const parsedCopies = Number.parseInt(copiesText.replace(/[^\d]/g, ''), 10)
+          if (!Number.isInteger(parsedCopies) || parsedCopies < 1) {
+            result.errors.push({ row: lineNumber, title, message: `Copies must be a positive number (got "${copiesText}")` })
             continue
           }
+          copies = parsedCopies
+        }
 
-          let year: number | null = null
-          const yearText = valueAt(row, headers, map.year)
-          if (yearText) {
-            const parsedYear = Number.parseInt(yearText.replace(/[^\d]/g, ''), 10)
-            if (!Number.isInteger(parsedYear) || parsedYear < 0 || parsedYear > 9999) {
-              result.errors.push({ row: lineNumber, title, message: `Invalid year "${yearText}"` })
-              continue
-            }
-            year = parsedYear
-          }
+        const authorName = valueAt(row, headers, map.author)
+        const categoryName = valueAt(row, headers, map.category)
+        const publisherName = valueAt(row, headers, map.publisher)
+        const description = valueAt(row, headers, map.description)
 
-          let copies = 1
-          const copiesText = valueAt(row, headers, map.copies)
-          if (copiesText) {
-            const parsedCopies = Number.parseInt(copiesText.replace(/[^\d]/g, ''), 10)
-            if (!Number.isInteger(parsedCopies) || parsedCopies < 1) {
-              result.errors.push({ row: lineNumber, title, message: `Copies must be a positive number (got "${copiesText}")` })
-              continue
-            }
-            copies = parsedCopies
-          }
+        const authorId = authorName
+          ? await resolveNamed('authors', authorName, refs.authorIds, options.createAuthors)
+          : null
+        const categoryId = categoryName
+          ? await resolveNamed('categories', categoryName, refs.categoryIds, options.createCategories)
+          : null
+        const publisherId = publisherName
+          ? await resolveNamed('publishers', publisherName, refs.publisherIds, options.createPublishers)
+          : null
 
-          const authorName = valueAt(row, headers, map.author)
-          const categoryName = valueAt(row, headers, map.category)
-          const publisherName = valueAt(row, headers, map.publisher)
-          const description = valueAt(row, headers, map.description)
-
-          const authorId = authorName
-            ? await resolveNamed('authors', authorName, refs.authorIds, options.createAuthors)
-            : null
-          const categoryId = categoryName
-            ? await resolveNamed('categories', categoryName, refs.categoryIds, options.createCategories)
-            : null
-          const publisherId = publisherName
-            ? await resolveNamed('publishers', publisherName, refs.publisherIds, options.createPublishers)
-            : null
-
-          const inserted = await tx.one<{ id: number }>(
-            `INSERT INTO books (
-              title, isbn, author_id, category_id, publisher_id, publication_year,
-              description, total_copies, available_copies, is_archived, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, FALSE, $10, $11) RETURNING id`,
-            [
-              title.slice(0, MAX_CELL_LENGTH),
-              isbn.slice(0, MAX_CELL_LENGTH) || null,
-              authorId,
-              categoryId,
-              publisherId,
-              year,
-              description.slice(0, MAX_CELL_LENGTH) || null,
-              copies,
-              copies,
-              ts,
-              ts
-            ]
-          )
-          if (!inserted) {
-            result.errors.push({ row: lineNumber, title, message: 'Failed to insert book' })
-            continue
-          }
-
+        try {
+          await repo.books.create({
+            title: title.slice(0, MAX_CELL_LENGTH),
+            isbn: isbn.slice(0, MAX_CELL_LENGTH) || null,
+            author_id: authorId,
+            category_id: categoryId,
+            publisher_id: publisherId,
+            publication_year: year,
+            description: description.slice(0, MAX_CELL_LENGTH) || null,
+            total_copies: copies,
+            available_copies: copies
+          })
           seenInImport.add(dupKey)
           if (isbnKey) refs.isbns.add(isbnKey)
           result.imported += 1
+        } catch (err) {
+          result.errors.push({
+            row: lineNumber,
+            title,
+            message: err instanceof Error ? err.message : 'Failed to insert book'
+          })
         }
-      })
+      }
 
       result.createdAuthors = refs.authorIds.size - baselineAuthors
       result.createdCategories = refs.categoryIds.size - baselineCategories

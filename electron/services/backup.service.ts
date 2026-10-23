@@ -9,8 +9,8 @@ import {
   readFileSync
 } from 'node:fs'
 import { join } from 'node:path'
-import type { Db } from '../database/pg/client'
-import { toIso } from '../database/pg/repositories/utils'
+import type { MongoDb } from '../database/mongo/client'
+import { toIso } from '../database/mongo/repositories/utils'
 import { logger } from '../utils/logger'
 import type { BackupFile, BackupRestoreResult } from '@shared/types'
 import { resolveImagePath } from '../config/paths'
@@ -26,12 +26,43 @@ const BACKUP_TABLES = [
   'schema_migrations'
 ] as const
 
+const ALLOWED_COLUMNS: Record<(typeof BACKUP_TABLES)[number], Set<string>> = {
+  authors: new Set(['id', 'name', 'name_lower', 'biography', 'is_archived', 'created_at']),
+  categories: new Set(['id', 'name', 'name_lower', 'description', 'is_archived', 'created_at']),
+  publishers: new Set(['id', 'name', 'name_lower', 'address', 'website', 'is_archived', 'created_at']),
+  books: new Set([
+    'id',
+    'title',
+    'isbn',
+    'isbn_lower',
+    'author_id',
+    'category_id',
+    'publisher_id',
+    'publication_year',
+    'edition',
+    'subject',
+    'description',
+    'call_number',
+    'shelf_location',
+    'total_copies',
+    'available_copies',
+    'cover_image',
+    'is_archived',
+    'created_at',
+    'updated_at'
+  ]),
+  admin_users: new Set(['id', 'username', 'username_lower', 'password_hash', 'full_name', 'created_at', 'updated_at']),
+  borrowings: new Set(['id', 'book_id', 'borrower_name', 'borrower_id', 'borrowed_at', 'due_date', 'returned_at', 'status']),
+  settings: new Set(['key', 'value']),
+  schema_migrations: new Set(['version', 'name', 'applied_at'])
+}
+
 const BACKUP_SUFFIX = '.opacbk'
 const FORMAT = 'opac-library-backup'
 const FORMAT_VERSION = 1
 
 export interface BackupServiceDeps {
-  db: Db
+  mongo: MongoDb
   imagesDir: string
   backupsDir: string
   getSchemaVersion: () => Promise<number>
@@ -65,7 +96,8 @@ function folderSize(dir: string): number {
   let total = 0
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry)
-    total += statSync(full).size
+    const st = statSync(full)
+    if (st.isFile()) total += st.size
   }
   return total
 }
@@ -74,15 +106,26 @@ export function backupService(deps: BackupServiceDeps): BackupService {
   async function dumpData(): Promise<Record<string, unknown[]>> {
     const out: Record<string, unknown[]> = {}
     for (const table of BACKUP_TABLES) {
-      const rows = await deps.db.many<Record<string, unknown>>(`SELECT * FROM ${table}`)
+      const allowed = ALLOWED_COLUMNS[table]
+      const rows = await deps.mongo.db
+        .collection<Record<string, unknown>>(table)
+        .find({}, { projection: { _id: 0 } })
+        .toArray()
       out[table] = rows.map((row) => {
         const clean: Record<string, unknown> = {}
         for (const [key, value] of Object.entries(row)) {
+          if (key === '_id' || key.endsWith('_lower')) continue
+          if (!allowed.has(key)) continue
           clean[key] = value instanceof Date ? value.toISOString() : value
         }
         return clean
       })
     }
+    const imageDocs = await deps.mongo.db
+      .collection<Record<string, unknown>>('images')
+      .find({}, { projection: { _id: 0 } })
+      .toArray()
+    out.images = imageDocs
     return out
   }
 
@@ -177,23 +220,11 @@ export function backupService(deps: BackupServiceDeps): BackupService {
     return { manifest, data }
   }
 
-  /** Column names a backup may legally reference for a given table, taken from
-   *  the live database schema. Anything else is rejected so a crafted backup
-   *  file can never inject SQL through the INSERT column list. */
-  async function allowedColumns(table: string): Promise<Set<string>> {
-    const rows = await deps.db.many<{ column_name: string }>(
-      `SELECT column_name FROM information_schema.columns
-       WHERE table_schema = 'public' AND table_name = $1`,
-      [table]
-    )
-    return new Set(rows.map((r) => r.column_name))
-  }
-
   function validateRows(
-    table: string,
-    rows: Array<Record<string, unknown>>,
-    allowed: Set<string>
+    table: (typeof BACKUP_TABLES)[number],
+    rows: Array<Record<string, unknown>>
   ): void {
+    const allowed = ALLOWED_COLUMNS[table]
     for (const row of rows) {
       for (const [column, value] of Object.entries(row)) {
         if (!allowed.has(column)) {
@@ -210,37 +241,46 @@ export function backupService(deps: BackupServiceDeps): BackupService {
     const currentSchemaVersion = await deps.getSchemaVersion()
     const { data } = readBackup(folder, currentSchemaVersion)
 
-    const schemaVectors = new Map<string, Set<string>>()
     for (const table of BACKUP_TABLES) {
-      schemaVectors.set(table, await allowedColumns(table))
+      const rows = data[table] as Array<Record<string, unknown>>
+      if (!rows.length) continue
+      validateRows(table, rows)
     }
 
-    await deps.db.tx(async (tx) => {
-      for (const table of BACKUP_TABLES) {
-        const rows = data[table]
-        if (!rows.length) continue
-        validateRows(table, rows as Array<Record<string, unknown>>, schemaVectors.get(table) as Set<string>)
-      }
+    for (const table of BACKUP_TABLES) {
+      await deps.mongo.db.collection(table).deleteMany({})
+    }
 
-      const tablesToClear = [...BACKUP_TABLES].sort(
-        (a, b) => orderOf(b) - orderOf(a)
-      )
-      for (const table of tablesToClear) {
-        await tx.query(`TRUNCATE TABLE ${table} RESTART IDENTITY CASCADE`)
-      }
-
-      for (const table of BACKUP_TABLES) {
-        const rows = data[table]
-        if (!rows.length) continue
-        const columns = Object.keys(rows[0] as Record<string, unknown>)
-        const colList = columns.join(', ')
-        for (const row of rows as Array<Record<string, unknown>>) {
-          const values = columns.map((c) => row[c] ?? null)
-          const placeholders = values.map((_, i) => `$${i + 1}`).join(', ')
-          await tx.query(`INSERT INTO ${table} (${colList}) VALUES (${placeholders})`, values)
+    for (const table of BACKUP_TABLES) {
+      const rows = data[table] as Array<Record<string, unknown>>
+      if (!rows.length) continue
+      let maxId = 0
+      const docs = rows.map((raw) => {
+        const doc: Record<string, unknown> = { ...raw }
+        if (typeof doc.id === 'number' && doc.id > maxId) {
+          maxId = doc.id
         }
+        if ((table === 'authors' || table === 'categories' || table === 'publishers') && typeof doc.name === 'string') {
+          doc.name_lower = doc.name.toLowerCase()
+        }
+        if (table === 'books' && typeof doc.isbn === 'string' && doc.isbn.trim()) {
+          doc.isbn_lower = doc.isbn.trim().toLowerCase()
+        }
+        if (table === 'admin_users' && typeof doc.username === 'string') {
+          doc.username_lower = doc.username.toLowerCase()
+        }
+        return doc
+      })
+      await deps.mongo.db.collection(table).insertMany(docs)
+      if (maxId > 0) {
+        await deps.mongo.setSeqIfGreater(table, maxId)
       }
-    })
+    }
+
+    if (Array.isArray(data.images) && data.images.length > 0) {
+      await deps.mongo.db.collection('images').deleteMany({})
+      await deps.mongo.db.collection('images').insertMany(data.images as Array<Record<string, unknown>>)
+    }
 
     const coversDir = join(folder, 'covers')
     if (existsSync(coversDir)) {
@@ -255,10 +295,6 @@ export function backupService(deps: BackupServiceDeps): BackupService {
         }
       }
     }
-  }
-
-  function orderOf(table: string): number {
-    return BACKUP_TABLES.indexOf(table as (typeof BACKUP_TABLES)[number])
   }
 
   return {
@@ -301,7 +337,6 @@ export function backupService(deps: BackupServiceDeps): BackupService {
       const source = join(deps.backupsDir, safe)
       if (!existsSync(source)) throw new Error('Backup not found')
 
-      // Pre-restore safety snapshot of the current database.
       mkdirSync(deps.backupsDir, { recursive: true })
       const pre = `pre-restore-${Date.now()}${BACKUP_SUFFIX}`
       mkdirSync(join(deps.backupsDir, pre), { recursive: true })

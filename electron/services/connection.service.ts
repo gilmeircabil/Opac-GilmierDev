@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import type { ConnectionConfig, ConnectionStatus } from '@shared/types'
 import { logger } from '../utils/logger'
 import { encryptSecret, decryptSecret } from '../utils/crypto'
+import { apiBaseUrl } from './remote.client'
 
 export function connectionFilePath(userDataDir: string): string {
   return join(userDataDir, 'connection.json')
@@ -16,7 +17,11 @@ export interface ConnectionStore {
 }
 
 function sanitizeHost(host: string): string {
-  return host.trim().replace(/^https?:\/\//, '').replace(/\/+$/, '')
+  const trimmed = host.trim().replace(/\/+$/, '')
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed
+  }
+  return trimmed.replace(/^https?:\/\//i, '')
 }
 
 export function connectionStore(userDataDir: string): ConnectionStore {
@@ -30,15 +35,12 @@ export function connectionStore(userDataDir: string): ConnectionStore {
           port?: unknown
           token?: unknown
         }
-        if (
-          typeof raw.host !== 'string' ||
-          !raw.host.trim() ||
-          typeof raw.port !== 'number'
-        ) {
+        if (typeof raw.host !== 'string' || !raw.host.trim()) {
           return { host: '127.0.0.1', port: 47821 }
         }
+        const port = typeof raw.port === 'number' && raw.port > 0 ? raw.port : 47821
         const token = typeof raw.token === 'string' && raw.token.trim() ? decryptSecret(raw.token) : undefined
-        return { host: sanitizeHost(raw.host), port: raw.port, token }
+        return { host: sanitizeHost(raw.host), port, token }
       } catch (err) {
         logger.error('failed to read connection configuration', err)
         return { host: '127.0.0.1', port: 47821 }
@@ -47,11 +49,11 @@ export function connectionStore(userDataDir: string): ConnectionStore {
     save(config: ConnectionConfig): void {
       const clean: ConnectionConfig = {
         host: sanitizeHost(config.host),
-        port: config.port,
+        port: Number.isInteger(config.port) && config.port > 0 ? config.port : 47821,
         token: config.token && config.token.trim() ? encryptSecret(config.token.trim()) : undefined
       }
       writeFileSync(connectionFilePath(userDataDir), JSON.stringify(clean, null, 2), 'utf8')
-      logger.info('connection configuration saved')
+      logger.info('connection configuration saved', { host: clean.host, port: clean.port })
     },
     reset(): void {
       try {
@@ -63,9 +65,9 @@ export function connectionStore(userDataDir: string): ConnectionStore {
     },
     async test(config: ConnectionConfig): Promise<ConnectionStatus> {
       const host = sanitizeHost(config.host)
-      const port = config.port
-      if (!host || !port) {
-        return { ok: false, error: 'Enter the server address and port' }
+      const port = config.port || 47821
+      if (!host) {
+        return { ok: false, error: 'Enter the server address' }
       }
       const controller = new AbortController()
       const timeout = setTimeout(() => controller.abort(), 8000)
@@ -74,7 +76,8 @@ export function connectionStore(userDataDir: string): ConnectionStore {
         if (config.token?.trim()) {
           headers['Authorization'] = `Bearer ${config.token.trim()}`
         }
-        const res = await fetch(`http://${host}:${port}/api/v1/library`, {
+        const base = apiBaseUrl({ host, port, token: config.token })
+        const res = await fetch(`${base}/api/v1/library`, {
           signal: controller.signal,
           headers
         })

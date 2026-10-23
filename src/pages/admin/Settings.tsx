@@ -12,7 +12,9 @@ import {
   ImageIcon,
   Sparkles,
   Code2,
-  Wand2
+  Wand2,
+  Database,
+  Globe
 } from 'lucide-react'
 import { useAppStore } from '../../stores/app'
 import Input from '../../components/ui/Input'
@@ -22,7 +24,8 @@ import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import GitHubConfirmModal from '../../components/ui/GitHubConfirmModal'
 import Spinner from '../../components/ui/Spinner'
-import type { BackupFile } from '@shared/types'
+import ServerConnectionModal from '../../components/ServerConnectionModal'
+import type { BackupFile, DatabaseStatus, ServerStatus } from '@shared/types'
 import { errorMessage, formatDate, formatFileSize, imageUrl } from '../../lib/utils'
 
 export default function SettingsPage() {
@@ -49,9 +52,26 @@ export default function SettingsPage() {
   const [pwConfirm, setPwConfirm] = useState('')
   const [pwBusy, setPwBusy] = useState(false)
   const [pwMsg, setPwMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
+  const [dbStatus, setDbStatus] = useState<DatabaseStatus | null>(null)
+  const [netStatus, setNetStatus] = useState<ServerStatus | null>(null)
+  const [connModalOpen, setConnModalOpen] = useState(false)
+
+  const loadSystemStatus = async () => {
+    try {
+      const [db, net] = await Promise.all([
+        window.api.database.status().catch(() => null),
+        window.api.network.status().catch(() => null)
+      ])
+      if (db) setDbStatus(db)
+      if (net) setNetStatus(net)
+    } catch {
+      // ignore
+    }
+  }
 
   useEffect(() => {
     void loadBackups()
+    void loadSystemStatus()
   }, [])
 
   const loadBackups = async () => {
@@ -221,6 +241,68 @@ export default function SettingsPage() {
           {msg}
         </p>
       )}
+
+      {/* MongoDB & Remote Access */}
+      <section className="rounded-xl border border-slate-200 bg-surface p-6 shadow-card dark:border-slate-700">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+              <Database className="h-4 w-4 text-primary-500" /> MongoDB & Remote Access (Work from Anywhere)
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Connect to a local MongoDB on your PC, MongoDB Atlas free cloud, or a remote OPAC server via tunnel.
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => setConnModalOpen(true)}
+            icon={<Globe className="h-4 w-4" />}
+          >
+            Configure Connection…
+          </Button>
+        </div>
+
+        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Database Engine</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              {dbStatus?.version || 'MongoDB'}
+            </p>
+            <p className="mt-0.5 truncate font-mono text-[11px] text-muted">
+              {dbStatus?.mongoUriMasked || 'mongodb://127.0.0.1:27017/opac'}
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">API Server Port</p>
+            <p className="mt-1 text-sm font-semibold text-foreground">
+              Port {netStatus?.apiPort || 47821} ({netStatus?.running ? 'Online' : 'Standby'})
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted">
+              Host: {netStatus?.host || '127.0.0.1'}
+            </p>
+          </div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">LAN / Local Access</p>
+            <p className="mt-1 truncate font-mono text-xs font-semibold text-foreground">
+              {netStatus?.lanAddresses?.length
+                ? netStatus.lanAddresses.map((ip) => `${ip}:${netStatus.apiPort}`).join(', ')
+                : `127.0.0.1:${netStatus?.apiPort || 47821}`}
+            </p>
+            <p className="mt-0.5 text-[11px] text-muted">
+              Expose via Cloudflare Tunnel or Tailscale for $0 internet access
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <ServerConnectionModal
+        open={connModalOpen}
+        onClose={() => setConnModalOpen(false)}
+        isAdmin
+        onConnected={() => void loadSystemStatus()}
+      />
 
       {/* Library info */}
       <section className="rounded-xl border border-slate-200 bg-surface p-6 shadow-card dark:border-slate-700">

@@ -1,5 +1,5 @@
 import { createHash, randomBytes } from 'node:crypto'
-import type { Repositories } from '../database/pg/repositories'
+import type { MongoRepositories as Repositories } from '../database/mongo/repositories'
 import type { ApiTokenInfo } from '@shared/types'
 import { logger } from '../utils/logger'
 

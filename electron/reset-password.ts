@@ -2,9 +2,9 @@ import bcrypt from 'bcryptjs'
 import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { getSystemDirs } from './config/paths'
-import { provisioner } from './database/pg/provision'
-import { pgDb } from './database/pg/client'
-import { repositories } from './database/pg/repositories'
+import { configStore } from './services/config.service'
+import { connectMongoDb } from './database/mongo/client'
+import { mongoRepositories } from './database/mongo/repositories'
 
 export interface ResetPasswordOptions {
   newPassword?: string
@@ -17,29 +17,24 @@ export async function runResetPassword(options: ResetPasswordOptions = {}): Prom
 }> {
   const password = options.newPassword || 'Admin1234!'
   const systemDirs = getSystemDirs()
-  const prov = provisioner(systemDirs)
-  const info = await prov.ensure()
+  const cfg = configStore(systemDirs).get()
 
-  const db = pgDb({
-    host: '127.0.0.1',
-    port: info.port,
-    user: info.appUser,
-    password: info.appUserPassword,
-    database: info.database
+  const mongo = await connectMongoDb({
+    uri: cfg.mongoUri,
+    dbName: cfg.mongoDbName
   })
 
   try {
-    const repo = repositories(db)
+    const repo = mongoRepositories(mongo)
     const targetUsername = options.username || 'admin'
     let user = await repo.users.findByUsername(targetUsername)
 
     if (!user) {
-      // Find the first user in admin_users if specific username not found
-      const firstRow = await db.one<{ id: number; username: string }>(
-        'SELECT id, username FROM admin_users ORDER BY id ASC LIMIT 1'
-      )
+      const firstRow = await repo.users.getFirstAdmin()
       if (!firstRow) {
-        throw new Error('No administrator account found in the database. Please launch the app to set up the first administrator.')
+        throw new Error(
+          'No administrator account found in the MongoDB database. Please launch the app to set up the first administrator.'
+        )
       }
       user = { id: Number(firstRow.id) }
     }
@@ -52,7 +47,7 @@ export async function runResetPassword(options: ResetPasswordOptions = {}): Prom
 
     const resultMessage = [
       '====================================================',
-      'OPAC LIBRARY SYSTEM - ADMIN PASSWORD RESET',
+      'OPAC LIBRARY SYSTEM - ADMIN PASSWORD RESET (MONGODB)',
       '====================================================',
       `Username:     ${resultUsername}`,
       `New Password: ${password}`,
@@ -73,6 +68,6 @@ export async function runResetPassword(options: ResetPasswordOptions = {}): Prom
       newPassword: password
     }
   } finally {
-    await db.end()
+    await mongo.end()
   }
 }

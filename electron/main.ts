@@ -4,16 +4,17 @@ import { pathToFileURL } from 'node:url'
 import { existsSync, writeFileSync } from 'node:fs'
 import { getAppDirs, ensureDirs, ensureSystemDirs, getSystemDirs, resolveImagePath } from './config/paths'
 import { getAppMode } from './config/mode'
-import type { AppMode, ConnectionConfig } from '@shared/types'
+import type { AppMode, ConnectionConfig, MongoConfigInfo, MongoConfigInput } from '@shared/types'
 import { initLogger, logger } from './utils/logger'
-import { provisioner } from './database/pg/provision'
-import type { Db } from './database/pg/client'
+import { connectMongoDb, type MongoDb } from './database/mongo/client'
 import { registerAllIpc } from './ipc'
 import { setIpcSenderValidator } from './ipc/register'
 import type { Services } from './ipc/types'
 import { buildAdminServices } from './services/admin.services'
 import { buildUserServices } from './services/user.services'
 import { migrateSqliteFrom } from './services/migrate-sqlite.service'
+import { configStore } from './services/config.service'
+import { apiBaseUrl } from './services/remote.client'
 
 const IMAGE_SCHEME = 'opac-img'
 
@@ -31,8 +32,9 @@ protocol.registerSchemesAsPrivileged([
 ])
 
 let mainWindow: BrowserWindow | null = null
-let appServices: Services | null = null
-let adminDb: Db | null = null
+let backendServices: Services | null = null
+let adminMongo: MongoDb | null = null
+let getConnectionOverride: (() => ConnectionConfig | null) | null = null
 
 /** Restricts ipcMain.handle calls to the main frame of a real app window. */
 function enableIpcSenderValidation(): void {
@@ -89,32 +91,53 @@ function createWindow(): void {
   }
 }
 
-// broadcastToRenderer removed as it is no longer used in thin client mode
-
-let getConnectionOverride: (() => ConnectionConfig | null) | null = null
-
 function registerImageProtocol(appMode: AppMode): void {
   protocol.handle(IMAGE_SCHEME, async (request) => {
     try {
       const url = new URL(request.url)
       const filename = decodeURIComponent(url.pathname.replace(/^\/+/, ''))
-      if (appMode === 'user') {
-        const config = getConnectionOverride?.() ?? null
-        if (!config || !config.host) {
+      const conn = getConnectionOverride?.() ?? null
+
+      // 1. If User mode or Admin connected to a remote server URL, fetch from remote API
+      const isRemoteConfigured =
+        conn &&
+        conn.host &&
+        conn.host !== '127.0.0.1' &&
+        conn.host !== 'localhost'
+
+      if (appMode === 'user' || isRemoteConfigured) {
+        if (!conn || !conn.host) {
           return new Response('Not configured', { status: 503 })
         }
-        const remoteUrl = `http://${config.host.trim().replace(/^https?:\/\//, '')}:${config.port}/api/v1/covers/${encodeURIComponent(filename)}`
+        const base = apiBaseUrl(conn)
+        const remoteUrl = `${base}/api/v1/covers/${encodeURIComponent(filename)}`
         const headers: Record<string, string> = {}
-        if (config.token) {
-          headers['Authorization'] = `Bearer ${config.token}`
+        if (conn.token) {
+          headers['Authorization'] = `Bearer ${conn.token}`
         }
         return net.fetch(remoteUrl, { headers })
       }
-      const fullPath = resolveImagePath(getSystemDirs().imagesDir, filename)
-      if (!existsSync(fullPath)) {
-        return new Response('Not found', { status: 404 })
+
+      // 2. If in-process backend has MongoDB image service, serve from MongoDB / disk
+      if (backendServices?.images?.getBuffer) {
+        const stored = await backendServices.images.getBuffer(filename)
+        if (stored) {
+          return new Response(new Uint8Array(stored.buffer), {
+            status: 200,
+            headers: { 'Content-Type': stored.mime }
+          })
+        }
       }
-      return net.fetch(pathToFileURL(fullPath).toString())
+
+      // 3. Check local disk imagesDir
+      const fullPath = resolveImagePath(getSystemDirs().imagesDir, filename)
+      if (existsSync(fullPath)) {
+        return net.fetch(pathToFileURL(fullPath).toString())
+      }
+
+      // 4. Fallback to local backend HTTP server (if running as a separate Windows service)
+      const cfg = configStore(getSystemDirs()).get()
+      return net.fetch(`http://127.0.0.1:${cfg.apiPort}/api/v1/covers/${encodeURIComponent(filename)}`)
     } catch {
       return new Response('Bad request', { status: 400 })
     }
@@ -128,30 +151,33 @@ async function runBackend(): Promise<void> {
   ensureSystemDirs(systemDirs)
   initLogger({ logsDir: systemDirs.logsDir })
 
-  const makeProvisioner = provisioner(systemDirs, {
-    onLog: (line: string) => logger.info(line)
-  })
+  if (backendServices?.network) {
+    await backendServices.network.stop().catch(() => undefined)
+  }
+  if (adminMongo) {
+    await adminMongo.end().catch(() => undefined)
+    adminMongo = null
+  }
 
-  // We don't broadcast to renderer in pure backend mode
-  const build = buildAdminServices(dirs, systemDirs, makeProvisioner, {
+  const build = buildAdminServices(dirs, systemDirs, {
     broadcastSettings: () => {},
     broadcastSession: () => {}
   })
 
-  const { services, db, repo } = await build()
-  appServices = services
-  adminDb = db
+  const { services, mongo, repo } = await build()
+  backendServices = services
+  adminMongo = mongo
 
   const legacySqlitePath = dirs.dbPath
   if (existsSync(legacySqlitePath)) {
     const report = await migrateSqliteFrom({
-      db,
+      mongo,
       repo,
       sqlitePath: legacySqlitePath,
       imagesDir: systemDirs.imagesDir
     })
     if (report.migrated) {
-      logger.info('legacy SQLite data migrated', { counts: report.counts, warnings: report.warnings })
+      logger.info('legacy SQLite data migrated to MongoDB', { counts: report.counts, warnings: report.warnings })
     }
   }
 
@@ -159,54 +185,147 @@ async function runBackend(): Promise<void> {
     await services.network?.start()
     logger.info('network server auto-started in backend mode')
   } catch (err) {
-    logger.error('failed to auto-start network server', err)
+    logger.warn('network server start skipped or already bound', err)
   }
 }
 
-import { configStore } from './services/config.service'
-
 async function bootstrapAdmin(): Promise<void> {
   const dirs = getAppDirs()
+  const systemDirs = getSystemDirs()
   ensureDirs(dirs)
+  ensureSystemDirs(systemDirs)
   initLogger({ logsDir: dirs.logsDir })
   enableIpcSenderValidation()
   registerImageProtocol('admin')
 
-  // The Admin UI is now a thin client. It communicates with the backend
-  // Windows service via HTTP. We only register local IPC handlers.
   const { services, getConnection } = buildUserServices(dirs)
   getConnectionOverride = getConnection
-  
-  // Override mode to 'admin' so the React app renders the admin dashboard
-  services.mode = async () => 'admin'
-  // Override isAuthenticated so local thin-client IPC mocks don't throw Auth errors
-  services.isAuthenticated = async () => true
-  
-  // We need to provide the local network port so the React app knows where the backend is.
-  const systemDirs = getSystemDirs()
-  const cfg = configStore(systemDirs).get()
-  
-  services.network = {
-    status: async () => ({
-      running: true,
-      library: 'OPAC Library',
-      databaseConnected: true,
-      host: 'localhost',
-      lanAddresses: [],
-      apiPort: cfg.apiPort,
-      apiVersion: '1.0.0',
-      connectedUsers: 1
-    }),
-    start: async () => services.network!.status(),
-    stop: async () => {},
-    restart: async () => services.network!.status(),
-    setPort: async () => services.network!.status(),
-    tokenInfo: async () => ({ configured: true, label: 'admin', created_at: '', last_used_at: '' }),
-    regenerateToken: async () => ({ token: '', info: { configured: true, label: 'admin', created_at: '', last_used_at: '' } }),
-    firewall: async () => ({ ok: true })
-  } as any
 
-  appServices = services
+  const cfgStore = configStore(systemDirs)
+
+  // Try starting the local MongoDB backend in-process if not pointing to a remote server
+  const conn = getConnection()
+  const isRemoteHost =
+    conn && conn.host && conn.host !== '127.0.0.1' && conn.host !== 'localhost'
+
+  if (!isRemoteHost) {
+    try {
+      await runBackend()
+    } catch (err) {
+      logger.warn(
+        'Could not auto-start local MongoDB backend on boot (MongoDB may not be running locally or remote server will be used)',
+        err
+      )
+    }
+  }
+
+  services.mode = async () => 'admin'
+  services.isAuthenticated = async () => true
+
+  services.network = {
+    status: async () => {
+      if (backendServices?.network) {
+        return backendServices.network.status()
+      }
+      const cfg = cfgStore.get()
+      return {
+        running: true,
+        library: 'OPAC Library',
+        databaseConnected: Boolean(adminMongo),
+        host: conn?.host || '127.0.0.1',
+        lanAddresses: [],
+        apiPort: conn?.port || cfg.apiPort,
+        apiVersion: '2.0.0',
+        connectedUsers: 1
+      }
+    },
+    start: async () => {
+      if (!backendServices) {
+        await runBackend()
+      }
+      return backendServices?.network ? backendServices.network.start() : services.network!.status()
+    },
+    stop: async () => {
+      if (backendServices?.network) await backendServices.network.stop()
+    },
+    restart: async () => {
+      if (backendServices?.network) return backendServices.network.restart()
+      await runBackend()
+      return services.network!.status()
+    },
+    setPort: async (port: number) => {
+      if (backendServices?.network) return backendServices.network.setPort(port)
+      cfgStore.setPort(port)
+      return services.network!.status()
+    },
+    tokenInfo: async () => {
+      if (backendServices?.network) return backendServices.network.tokenInfo()
+      return { configured: false, label: '', created_at: null, last_used_at: null }
+    },
+    regenerateToken: async () => {
+      if (backendServices?.network) return backendServices.network.regenerateToken()
+      return { token: '', info: { configured: false, label: '', created_at: null, last_used_at: null } }
+    },
+    firewall: async () => {
+      if (backendServices?.network) return backendServices.network.firewall()
+      return {
+        accessTokenConfigured: false,
+        tokenLabel: '',
+        suggestedFirewallCommand: `netsh advfirewall firewall add rule name="OPAC Library API" dir=in action=allow protocol=TCP localport=${cfgStore.get().apiPort} profile=private`
+      }
+    }
+  }
+
+  services.database = {
+    status: async () => {
+      if (backendServices?.database) {
+        return backendServices.database.status()
+      }
+      const c = cfgStore.get()
+      return {
+        connected: false,
+        version: 'MongoDB (Disconnected)',
+        schemaVersion: 1,
+        libraryName: 'OPAC Library',
+        mongoUriMasked: c.mongoUri.replace(/:\/\/([^:@]+):([^@]+)@/, '://$1:****@'),
+        mongoDbName: c.mongoDbName
+      }
+    },
+    clearCatalog: async () => {
+      if (backendServices?.database) return backendServices.database.clearCatalog()
+      throw new Error('Database not connected')
+    },
+    getMongoConfig: async (): Promise<MongoConfigInfo> => {
+      const c = cfgStore.get()
+      return { mongoUri: c.mongoUri, mongoDbName: c.mongoDbName }
+    },
+    setMongoConfig: async (input: MongoConfigInput): Promise<{ ok: boolean; error?: string }> => {
+      try {
+        const nextUri = (input.mongoUri || '').trim()
+        const nextDb = (input.mongoDbName || 'opac').trim() || 'opac'
+        cfgStore.setMongoConfig(nextUri, nextDb)
+        await runBackend()
+        return { ok: true }
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    },
+    testMongoUri: async (input: MongoConfigInput): Promise<{ ok: boolean; version?: string; error?: string }> => {
+      try {
+        const nextUri = (input.mongoUri || '').trim()
+        if (!nextUri.startsWith('mongodb://') && !nextUri.startsWith('mongodb+srv://')) {
+          return { ok: false, error: 'MongoDB URI must start with mongodb:// or mongodb+srv://' }
+        }
+        const nextDb = (input.mongoDbName || 'opac').trim() || 'opac'
+        const testConn = await connectMongoDb({ uri: nextUri, dbName: nextDb })
+        await testConn.end()
+        return { ok: true, version: 'MongoDB Connected' }
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    }
+  }
+
   registerAllIpc(services)
 
   finalizeBootstrap(dirs)
@@ -221,16 +340,16 @@ async function bootstrapUser(): Promise<void> {
 
   const { services, getConnection } = buildUserServices(dirs)
   getConnectionOverride = getConnection
-  
+
   services.network = {
     status: async () => ({
       running: true,
       library: 'OPAC Library',
       databaseConnected: true,
-      host: 'localhost',
+      host: getConnection()?.host ?? 'localhost',
       lanAddresses: [],
       apiPort: getConnection()?.port ?? 47821,
-      apiVersion: '1.0.0',
+      apiVersion: '2.0.0',
       connectedUsers: 0
     }),
     start: async () => services.network!.status(),
@@ -238,16 +357,19 @@ async function bootstrapUser(): Promise<void> {
     restart: async () => services.network!.status(),
     setPort: async () => services.network!.status(),
     tokenInfo: async () => ({
-      active: true,
-      created: Date.now(),
-      expiresAt: Date.now() + 86400000,
-      preview: '...'
+      configured: false,
+      label: '',
+      created_at: null,
+      last_used_at: null
     }),
     regenerateToken: async () => ({ token: '', info: await services.network!.tokenInfo() }),
-    firewall: async () => ({ active: false, command: '' })
-  } as any
+    firewall: async () => ({
+      accessTokenConfigured: false,
+      tokenLabel: '',
+      suggestedFirewallCommand: ''
+    })
+  }
 
-  appServices = services
   registerAllIpc(services)
   finalizeBootstrap(dirs)
 }
@@ -272,12 +394,12 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
-  if (appServices?.network) {
-    appServices.network.stop().catch((err) => logger.warn('network server stop error', err))
+  if (backendServices?.network) {
+    backendServices.network.stop().catch((err: unknown) => logger.warn('network server stop error', err))
   }
-  if (adminDb) {
-    adminDb.end().catch((err) => logger.warn('postgres pool close error', err))
-    adminDb = null
+  if (adminMongo) {
+    adminMongo.end().catch((err: unknown) => logger.warn('mongodb close error', err))
+    adminMongo = null
   }
 })
 

@@ -2,17 +2,17 @@ import { createReadStream, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyError } from 'fastify'
 import rateLimit from '@fastify/rate-limit'
-import type { Repositories } from '../database/pg/repositories'
+import type { MongoRepositories } from '../database/mongo/repositories'
 import type { ApiTokenService } from '../services/api-token.service'
 import type { BookFilters } from '@shared/types'
 import type { Services } from '../ipc/types'
 import { logger } from '../utils/logger'
 import { adminRoutes } from './admin-routes'
 
-export const API_VERSION = '1.0.0'
+export const API_VERSION = '2.0.0'
 
 export interface ApiServerDeps {
-  repos: Repositories
+  repos: MongoRepositories
   services?: Services
   tokenService?: ApiTokenService
   imagesDir: string
@@ -61,12 +61,12 @@ function parseIntOrNull(value: string | null): number | null {
 export async function buildApiServer(deps: ApiServerDeps): Promise<ApiServer> {
   const fastify = Fastify({
     logger: false,
-    trustProxy: false,
-    bodyLimit: 1 * 1024 * 1024
+    trustProxy: true,
+    bodyLimit: 15 * 1024 * 1024
   })
 
   await fastify.register(rateLimit, {
-    max: 200,
+    max: 300,
     timeWindow: '1 minute'
   })
 
@@ -74,7 +74,7 @@ export async function buildApiServer(deps: ApiServerDeps): Promise<ApiServer> {
     await fastify.register(adminRoutes, { services: deps.services })
   }
 
-  // Open CORS and standard security headers for public REST API access
+  // Open CORS and standard security headers for public & remote REST API access
   fastify.addHook('onSend', async (_request, reply) => {
     reply.header('X-Content-Type-Options', 'nosniff')
     reply.header('X-Frame-Options', 'DENY')
@@ -110,7 +110,7 @@ export async function buildApiServer(deps: ApiServerDeps): Promise<ApiServer> {
     return {
       ok: true,
       api_version: API_VERSION,
-      database: 'connected'
+      database: 'mongodb'
     }
   })
 
@@ -165,6 +165,19 @@ export async function buildApiServer(deps: ApiServerDeps): Promise<ApiServer> {
     if (!filename || /\.\.|[:*?"<>|]/.test(filename)) {
       return reply.code(400).send({ error: 'Invalid filename' })
     }
+    // Try MongoDB images collection first (via services.images or repos.images)
+    if (deps.services?.images?.getBuffer) {
+      const stored = await deps.services.images.getBuffer(filename)
+      if (stored) {
+        return reply.type(stored.mime).send(stored.buffer)
+      }
+    } else if (deps.repos.images) {
+      const doc = await deps.repos.images.get(filename)
+      if (doc && doc.buffer) {
+        return reply.type(doc.mime || mimeFor(filename)).send(doc.buffer)
+      }
+    }
+
     const fullPath = join(deps.imagesDir, filename)
     if (!existsSync(fullPath)) {
       return reply.code(404).send({ error: 'Cover not found' })

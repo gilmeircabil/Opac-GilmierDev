@@ -360,4 +360,16 @@ export interface DatabaseStatus {
   version: string | null
   schemaVersion: number
   libraryName: string
+  mongoUriMasked?: string
+  mongoDbName?: string
+}
+
+export interface MongoConfigInput {
+  mongoUri: string
+  mongoDbName?: string
+}
+
+export interface MongoConfigInfo {
+  mongoUri: string
+  mongoDbName: string
 }

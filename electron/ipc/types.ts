@@ -23,6 +23,8 @@ import type {
   ImportSheetPreview,
   ImportTaskInput,
   InstallInfo,
+  MongoConfigInfo,
+  MongoConfigInput,
   NetworkAccessInfo,
   Paginated,
   PublisherInput,
@@ -77,6 +79,8 @@ export interface BorrowingsService {
 export interface ImageService {
   pickCover(): Promise<ImageResult>
   pickLogo(): Promise<ImageResult>
+  uploadBase64?(fileName: string, base64Data: string): Promise<ImageResult>
+  getBuffer?(filename: string): Promise<{ mime: string; buffer: Buffer } | null>
   delete(filename: string): Promise<void>
 }
 
@@ -90,6 +94,9 @@ export interface BackupService {
 export interface DatabaseService {
   status(): Promise<DatabaseStatus>
   clearCatalog(): Promise<void>
+  getMongoConfig?(): Promise<MongoConfigInfo>
+  setMongoConfig?(input: MongoConfigInput): Promise<{ ok: boolean; error?: string }>
+  testMongoUri?(input: MongoConfigInput): Promise<{ ok: boolean; version?: string; error?: string }>
 }
 
 export interface ConnectionsService {

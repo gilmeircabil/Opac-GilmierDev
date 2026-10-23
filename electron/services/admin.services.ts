@@ -1,12 +1,11 @@
 import { app, shell } from 'electron'
 import type { AppDirs, SystemDirs } from '../config/paths'
 import { isPathWithin } from '../config/paths'
-import type { Db } from '../database/pg/client'
-import { pgDb } from '../database/pg/client'
-import type { PostgresProvisioner } from '../database/pg/provision'
-import type { Repositories } from '../database/pg/repositories'
-import { repositories } from '../database/pg/repositories'
-import { runMigrations, currentSchemaVersion } from '../database/pg/migrations'
+import type { MongoDb } from '../database/mongo/client'
+import { connectMongoDb } from '../database/mongo/client'
+import type { MongoRepositories } from '../database/mongo/repositories'
+import { mongoRepositories } from '../database/mongo/repositories'
+import { ensureMongoIndexes, currentMongoSchemaVersion } from '../database/mongo/indexes'
 import { authService } from './auth.service'
 import { settingsService } from './settings.service'
 import { apiTokenService } from './api-token.service'
@@ -16,44 +15,53 @@ import { networkAdminService } from './network-admin.service'
 import { bookImageService } from './book-image.service'
 import { bookImportService } from './book-import.service'
 import { backupService } from './backup.service'
+import { connectionStore } from './connection.service'
 import type { Services } from '../ipc/types'
-import type { DatabaseStatus } from '@shared/types'
+import type { DatabaseStatus, MongoConfigInfo, MongoConfigInput } from '@shared/types'
 import { logger } from '../utils/logger'
 
 export interface AdminServicesResult {
   services: Services
-  db: Db
-  provisioner: PostgresProvisioner
-  repo: Repositories
+  mongo: MongoDb
+  repo: MongoRepositories
+}
+
+function maskMongoUri(uri: string): string {
+  try {
+    return uri.replace(/:\/\/([^:@]+):([^@]+)@/, '://$1:****@')
+  } catch {
+    return uri
+  }
 }
 
 export function buildAdminServices(
   appDirs: AppDirs,
   systemDirs: SystemDirs,
-  provisioner: PostgresProvisioner,
   broadcastCallbacks: {
     broadcastSettings: () => void
     broadcastSession: () => void
-  }
+  },
+  mongoOverride?: { uri: string; dbName?: string }
 ): () => Promise<AdminServicesResult> {
   return async (): Promise<AdminServicesResult> => {
-    const info = await provisioner.ensure()
-    const db = pgDb({
-      host: '127.0.0.1',
-      port: info.port,
-      user: info.appUser,
-      password: info.appUserPassword,
-      database: info.database
+    const cfg = configStore(systemDirs)
+    const currentCfg = cfg.get()
+    const uri = mongoOverride?.uri || currentCfg.mongoUri
+    const dbName = mongoOverride?.dbName || currentCfg.mongoDbName || 'opac'
+
+    const mongo = await connectMongoDb({
+      uri,
+      dbName
     })
 
-    await runMigrations(db)
-    const repo = repositories(db)
+    await ensureMongoIndexes(mongo)
+    const repo = mongoRepositories(mongo)
 
     const auth = authService(repo)
     const settings = settingsService(repo)
     const tokenService = apiTokenService(repo)
-    const cfg = configStore(systemDirs)
-    const images = bookImageService(systemDirs.imagesDir)
+    const images = bookImageService(systemDirs.imagesDir, repo.images)
+    const connStore = connectionStore(appDirs.userData)
 
     const networkDeps: any = {
       repos: repo,
@@ -67,30 +75,64 @@ export function buildAdminServices(
     const network = networkService(networkDeps, () => cfg.get())
 
     const backup = backupService({
-      db,
+      mongo,
       imagesDir: systemDirs.imagesDir,
       backupsDir: systemDirs.backupsDir,
-      getSchemaVersion: () => currentSchemaVersion(db),
+      getSchemaVersion: () => currentMongoSchemaVersion(mongo),
       getLibraryName: () => settings.getAll().then((s) => s.library_name)
     })
 
-    const importer = bookImportService(db, repo)
+    const importer = bookImportService(repo)
 
     const databaseService = {
       async status(): Promise<DatabaseStatus> {
         const [schemaVersion, libraryName] = await Promise.all([
-          currentSchemaVersion(db),
+          currentMongoSchemaVersion(mongo),
           settings.getAll().then((s) => s.library_name)
         ])
+        const c = cfg.get()
         return {
           connected: true,
-          version: 'PostgreSQL',
+          version: 'MongoDB',
           schemaVersion,
-          libraryName
+          libraryName,
+          mongoUriMasked: maskMongoUri(c.mongoUri),
+          mongoDbName: c.mongoDbName
         }
       },
       async clearCatalog(): Promise<void> {
         await repo.books.clearCatalog()
+      },
+      async getMongoConfig(): Promise<MongoConfigInfo> {
+        const c = cfg.get()
+        return {
+          mongoUri: c.mongoUri,
+          mongoDbName: c.mongoDbName
+        }
+      },
+      async setMongoConfig(input: MongoConfigInput): Promise<{ ok: boolean; error?: string }> {
+        try {
+          const nextUri = (input.mongoUri || '').trim()
+          const nextDb = (input.mongoDbName || 'opac').trim() || 'opac'
+          cfg.setMongoConfig(nextUri, nextDb)
+          return { ok: true }
+        } catch (err) {
+          return { ok: false, error: err instanceof Error ? err.message : String(err) }
+        }
+      },
+      async testMongoUri(input: MongoConfigInput): Promise<{ ok: boolean; version?: string; error?: string }> {
+        try {
+          const nextUri = (input.mongoUri || '').trim()
+          if (!nextUri.startsWith('mongodb://') && !nextUri.startsWith('mongodb+srv://')) {
+            return { ok: false, error: 'MongoDB URI must start with mongodb:// or mongodb+srv://' }
+          }
+          const nextDb = (input.mongoDbName || 'opac').trim() || 'opac'
+          const testConn = await connectMongoDb({ uri: nextUri, dbName: nextDb })
+          await testConn.end()
+          return { ok: true, version: 'MongoDB Connected' }
+        } catch (err) {
+          return { ok: false, error: err instanceof Error ? err.message : String(err) }
+        }
       }
     }
 
@@ -107,9 +149,9 @@ export function buildAdminServices(
         dataDir: systemDirs.root,
         legacySqlitePath: appDirs.dbPath,
         postgres: {
-          managed: true,
-          port: info.port,
-          database: info.database
+          managed: false,
+          port: 27017,
+          database: dbName
         },
         apiPort: cfg.get().apiPort
       }),
@@ -140,7 +182,12 @@ export function buildAdminServices(
       },
       network: networkAdminService(network, tokenService, () => cfg.get().apiPort),
       database: databaseService,
-      connection: null,
+      connection: {
+        get: async () => connStore.get(),
+        save: async (config) => connStore.save(config),
+        test: async (config) => connStore.test(config),
+        reset: async () => connStore.reset()
+      },
       isAuthenticated: () => auth.isAuthenticated(),
       openPath: async (path) => {
         if (typeof path !== 'string' || !path) throw new Error('Invalid path')
@@ -161,7 +208,7 @@ export function buildAdminServices(
     }
 
     networkDeps.services = services
-    logger.info('admin services initialised', { port: info.port, database: info.database })
-    return { services, db, provisioner, repo }
+    logger.info('admin services initialised (MongoDB)', { database: dbName })
+    return { services, mongo, repo }
   }
 }

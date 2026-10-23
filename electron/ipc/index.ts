@@ -22,7 +22,7 @@ export function registerAllIpc(services: Services): void {
   registerPublishersIpc(services)
   if (services.borrowings) registerBorrowingsIpc(services)
   if (services.backup) registerBackupIpc(services)
-  if (services.images) registerImagesIpc(services)
+  registerImagesIpc(services)
   registerSettingsIpc(services)
   if (services.connection) registerConnectionsIpc(services)
   if (services.network) registerNetworkIpc(services)
