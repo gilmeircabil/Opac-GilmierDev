@@ -8,6 +8,7 @@
   "main": "out/main/main.js",
   "scripts": {
     "dev": "electron-vite dev",
+    "dev:user": "electron-vite dev -- --mode user",
     "preview": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
