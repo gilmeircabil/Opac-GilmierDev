@@ -51,7 +51,7 @@ export const useAppStore = create<AppState>((set) => ({
   triggerRefresh: () => set((s) => ({ refreshKey: s.refreshKey + 1 }))
 }))
 
-export function applyTheme(_theme?: string): void {
+function applyTheme(_theme?: string): void {
   const root = document.documentElement
   root.classList.remove('dark')
 }

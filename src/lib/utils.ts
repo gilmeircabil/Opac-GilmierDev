@@ -60,15 +60,3 @@ export function errorMessage(err: unknown): string {
 export function classNames(...parts: Array<string | false | null | undefined>): string {
   return parts.filter(Boolean).join(' ')
 }
-
-/** Strips scheme and trailing slashes from a server host input. */
-export function cleanServerHost(host: string): string {
-  return host.trim().replace(/^https?:\/\//i, '').replace(/\/+$/, '')
-}
-
-/** Formats a server host:port display string. */
-export function serverLabel(host: string, port: number): string {
-  const clean = cleanServerHost(host)
-  if (!clean) return ''
-  return `${clean}:${port}`
-}

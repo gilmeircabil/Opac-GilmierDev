@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookImage, BookOpen } from 'lucide-react'
+import { BookOpen } from 'lucide-react'
 import { imageUrl, classNames } from '../lib/utils'
 
 interface BookCoverProps {
@@ -52,8 +52,4 @@ export default function BookCover({ filename, title, className, sizes = 'md' }: 
       )}
     />
   )
-}
-
-export function CoverIcon() {
-  return <BookImage className="h-5 w-5" />
 }
