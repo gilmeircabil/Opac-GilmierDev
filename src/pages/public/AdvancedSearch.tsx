@@ -84,7 +84,7 @@ export default function AdvancedSearch() {
 
         <form
           onSubmit={onSubmit}
-          className="rounded-xl border border-slate-200 bg-surface p-6 shadow-card dark:border-slate-700"
+          className="rounded-2xl border border-slate-200/80 bg-surface p-6 shadow-card sm:p-8"
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input

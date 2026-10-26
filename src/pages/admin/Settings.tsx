@@ -238,17 +238,17 @@ export default function SettingsPage() {
       </div>
 
       {msg && (
-        <p className="rounded-lg bg-slate-100 px-4 py-3 text-sm text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+        <p className="rounded-xl bg-slate-100 px-4 py-3 text-sm text-slate-700">
           {msg}
         </p>
       )}
 
       {/* MongoDB & Remote Access */}
-      <section className="rounded-xl border border-slate-200 bg-surface p-6 shadow-card dark:border-slate-700">
+      <section className="rounded-2xl border border-slate-200/80 bg-surface p-6 shadow-card">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
-              <Database className="h-4 w-4 text-primary-500" /> MongoDB & Remote Access (Work from Anywhere)
+              <Database className="h-4 w-4 text-primary-600" /> MongoDB & Remote Access (Work from Anywhere)
             </h2>
             <p className="mt-1 text-sm text-muted">
               Connect to a local MongoDB on your PC, MongoDB Atlas free cloud, or a remote OPAC server via tunnel.
@@ -266,7 +266,7 @@ export default function SettingsPage() {
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+          <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Database Engine</p>
             <p className="mt-1 text-sm font-semibold text-foreground">
               {dbStatus?.version || 'MongoDB'}
@@ -275,7 +275,7 @@ export default function SettingsPage() {
               {dbStatus?.mongoUriMasked || 'mongodb://127.0.0.1:27017/opac'}
             </p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+          <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">API Server Port</p>
             <p className="mt-1 text-sm font-semibold text-foreground">
               Port {netStatus?.apiPort || 47821} ({netStatus?.running ? 'Online' : 'Standby'})
@@ -284,7 +284,7 @@ export default function SettingsPage() {
               Host: {netStatus?.host || '127.0.0.1'}
             </p>
           </div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-700 dark:bg-slate-800/50">
+          <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3.5">
             <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">LAN / Local Access</p>
             <p className="mt-1 truncate font-mono text-xs font-semibold text-foreground">
               {netStatus?.lanAddresses?.length
@@ -306,13 +306,13 @@ export default function SettingsPage() {
       />
 
       {/* Library info */}
-      <section className="rounded-xl border border-slate-200 bg-surface p-6 shadow-card dark:border-slate-700">
+      <section className="rounded-2xl border border-slate-200/80 bg-surface p-6 shadow-card">
         <h2 className="mb-4 text-base font-semibold text-foreground">Library Information</h2>
         <div className="mb-5 flex items-start gap-4">
           {logo ? (
-            <img src={logo} alt="Library logo" className="h-20 w-20 rounded-xl object-cover shadow-card" />
+            <img src={logo} alt="Library logo" className="h-20 w-20 rounded-2xl object-cover shadow-card ring-1 ring-slate-900/10" />
           ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-xl border border-dashed border-slate-300 text-muted dark:border-slate-600">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl border border-dashed border-slate-300 text-muted">
               <ImageIcon className="h-8 w-8" />
             </div>
           )}
@@ -356,11 +356,10 @@ export default function SettingsPage() {
         </form>
       </section>
 
-
       {/* Backup */}
-      <section className="rounded-xl border border-slate-200 bg-surface p-6 shadow-card dark:border-slate-700">
+      <section className="rounded-2xl border border-slate-200/80 bg-surface p-6 shadow-card">
         <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-foreground">
-          <DatabaseBackup className="h-4 w-4 text-primary-500" /> Backup & Restore
+          <DatabaseBackup className="h-4 w-4 text-primary-600" /> Backup & Restore
         </h2>
         <p className="mb-4 text-sm text-muted">
           Your data is stored locally at: <span className="font-mono text-xs">{paths?.dbPath ?? '…'}</span>
@@ -391,11 +390,11 @@ export default function SettingsPage() {
           {loadingBackups ? (
             <Spinner label="Loading backups…" />
           ) : backups.length === 0 ? (
-            <p className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-muted dark:border-slate-600">
+            <p className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-muted">
               No backups yet. Create one to keep your catalog safe.
             </p>
           ) : (
-            <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 dark:divide-slate-800 dark:border-slate-700">
+            <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200/80">
               {backups.map((b) => (
                 <li key={b.filename} className="flex items-center justify-between gap-3 px-4 py-3">
                   <div className="min-w-0">
@@ -416,12 +415,12 @@ export default function SettingsPage() {
 
       {/* Account */}
       {user && (
-        <section className="rounded-xl border border-slate-200 bg-surface p-6 shadow-card dark:border-slate-700">
+        <section className="rounded-2xl border border-slate-200/80 bg-surface p-6 shadow-card">
           <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-foreground">
-            <KeyRound className="h-4 w-4 text-primary-500" /> Change Password
+            <KeyRound className="h-4 w-4 text-primary-600" /> Change Password
           </h2>
           {pwMsg && (
-            <p className={`mb-4 rounded-lg px-3 py-2 text-sm font-medium ${pwMsg.type === 'ok' ? 'bg-green-50 text-green-700 dark:bg-green-900/40 dark:text-green-300' : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300'}`}>
+            <p className={`mb-4 rounded-xl px-3 py-2 text-sm font-medium ${pwMsg.type === 'ok' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
               {pwMsg.text}
             </p>
           )}
@@ -445,13 +444,13 @@ export default function SettingsPage() {
         </section>
       )}
 
-      <section className="relative overflow-hidden rounded-xl border border-slate-200 bg-surface p-6 shadow-card dark:border-slate-700">
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-surface p-6 shadow-card">
         <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-gradient-to-br from-primary-200/50 to-primary-500/10 blur-2xl" />
         <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-foreground">
-          <Sparkles className="h-4 w-4 text-primary-500" /> Publisher
+          <Sparkles className="h-4 w-4 text-primary-600" /> Publisher
         </h2>
         <div className="relative flex flex-wrap items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 text-lg font-bold text-white shadow-lg shadow-primary-500/30">
+          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-800 to-primary-950 text-lg font-bold text-white shadow-lifted">
             GD
           </div>
           <div className="min-w-0">
@@ -467,7 +466,7 @@ export default function SettingsPage() {
       </section>
 
       {/* Danger Zone: Delete Data */}
-      <section className="rounded-xl border border-red-200 bg-surface p-6 shadow-card">
+      <section className="rounded-2xl border border-red-200 bg-surface p-6 shadow-card">
         <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-red-600">
           <Trash2 className="h-4 w-4 text-red-600" /> Danger Zone: Delete Catalog Data
         </h2>

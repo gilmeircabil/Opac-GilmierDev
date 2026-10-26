@@ -174,9 +174,9 @@ export default function ImportBooksModal({ open, onClose, onImported }: ImportBo
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click()
             }}
-            className="ring-focus flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-300 bg-surface-2 px-6 py-10 text-center transition-colors hover:border-primary-400 hover:bg-primary-50/40 dark:border-slate-600 dark:hover:border-primary-500"
+            className="ring-focus flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-slate-300 bg-surface-2 px-6 py-10 text-center transition-colors hover:border-primary-400 hover:bg-primary-50/40"
           >
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 shadow-glow">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-800 to-primary-950 shadow-card">
               <FileSpreadsheet className="h-7 w-7 text-white" />
             </span>
             <div>
@@ -192,9 +192,9 @@ export default function ImportBooksModal({ open, onClose, onImported }: ImportBo
         ) : (
           <>
             {/* File info + change */}
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-surface-2 px-4 py-3 dark:border-slate-700">
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-surface-2 px-4 py-3">
               <div className="flex min-w-0 items-center gap-3">
-                <FileSpreadsheet className="h-5 w-5 shrink-0 text-primary-500" />
+                <FileSpreadsheet className="h-5 w-5 shrink-0 text-primary-600" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-foreground">{fileName}</p>
                   <p className="text-xs text-muted">
@@ -237,7 +237,7 @@ export default function ImportBooksModal({ open, onClose, onImported }: ImportBo
             </div>
 
             {/* Step 3: options */}
-            <div className="rounded-xl border border-slate-200 bg-surface-2 p-4 dark:border-slate-700">
+            <div className="rounded-xl border border-slate-200 bg-surface-2 p-4">
               <p className="mb-2.5 text-xs font-bold uppercase tracking-wide text-muted">Import options</p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {(
@@ -253,7 +253,7 @@ export default function ImportBooksModal({ open, onClose, onImported }: ImportBo
                       type="checkbox"
                       checked={options[key]}
                       onChange={(e) => setOptions((o) => ({ ...o, [key]: e.target.checked }))}
-                      className="ring-focus h-4 w-4 rounded border-slate-300 text-primary-600"
+                      className="ring-focus h-4 w-4 rounded border-slate-300 text-primary-900"
                     />
                     {label}
                   </label>
@@ -265,9 +265,9 @@ export default function ImportBooksModal({ open, onClose, onImported }: ImportBo
             {preview.rows.length > 0 && (
               <div>
                 <p className="mb-2 text-xs font-bold uppercase tracking-wide text-muted">Preview (first {preview.rows.length} rows)</p>
-                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
                   <table className="w-full text-left text-xs">
-                    <thead className="border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-wide text-muted dark:border-slate-700 dark:bg-slate-800/60">
+                    <thead className="border-b border-slate-200 bg-slate-50 text-[11px] uppercase tracking-wide text-muted">
                       <tr>
                         <th className="px-3 py-2 font-semibold">#</th>
                         {headers.map((h) => (
@@ -275,7 +275,7 @@ export default function ImportBooksModal({ open, onClose, onImported }: ImportBo
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                    <tbody className="divide-y divide-slate-100">
                       {preview.rows.map((row, ri) => (
                         <tr key={ri}>
                           <td className="px-3 py-2 text-muted">{ri + 2}</td>
@@ -286,7 +286,7 @@ export default function ImportBooksModal({ open, onClose, onImported }: ImportBo
                               <td
                                 key={h}
                                 className={classNames(
-                                  'max-w-[220px] truncate px-3 py-2',
+                                   'max-w-[220px] truncate px-3 py-2',
                                   isMapped ? 'font-medium text-foreground' : 'text-muted'
                                 )}
                                 title={row[idx] ?? ''}
@@ -304,29 +304,29 @@ export default function ImportBooksModal({ open, onClose, onImported }: ImportBo
             )}
 
             {error && (
-              <p className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-600 dark:bg-red-900/30 dark:text-red-300">{error}</p>
+              <p className="rounded-lg bg-red-50 px-3 py-2.5 text-sm text-red-600">{error}</p>
             )}
 
             {result && (
               <div className="space-y-3">
-                <div className="flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50 p-4 dark:border-green-800/60 dark:bg-green-900/20">
-                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600 dark:text-green-400" />
+                <div className="flex items-start gap-2.5 rounded-xl border border-green-200 bg-green-50 p-4">
+                  <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-green-600" />
                   <div className="text-sm">
-                    <p className="font-bold text-green-700 dark:text-green-300">
+                    <p className="font-bold text-green-700">
                       {result.imported} book{result.imported === 1 ? '' : 's'} imported
                     </p>
-                    <ul className="mt-1 list-inside space-y-0.5 text-green-700/90 dark:text-green-300/90">
+                    <ul className="mt-1 list-inside space-y-0.5 text-green-700/90">
                       <li>{result.skippedDuplicates} duplicate{result.skippedDuplicates === 1 ? '' : 's'} skipped</li>
                       <li>{result.createdAuthors} author{result.createdAuthors === 1 ? '' : 's'}, {result.createdCategories} categor{result.createdCategories === 1 ? 'y' : 'ies'}, {result.createdPublishers} publisher{result.createdPublishers === 1 ? '' : 's'} created</li>
                     </ul>
                   </div>
                 </div>
                 {result.errors.length > 0 && (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/60 dark:bg-amber-900/20">
-                    <p className="flex items-center gap-1.5 text-sm font-bold text-amber-700 dark:text-amber-300">
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                    <p className="flex items-center gap-1.5 text-sm font-bold text-amber-700">
                       <AlertTriangle className="h-4 w-4" /> {result.errors.length} row{result.errors.length === 1 ? '' : 's'} skipped
                     </p>
-                    <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs text-amber-700/90 dark:text-amber-300/90 scrollbar-thin">
+                    <ul className="mt-2 max-h-40 space-y-1 overflow-y-auto text-xs text-amber-700/90 scrollbar-thin">
                       {result.errors.map((e, i) => (
                         <li key={i}>
                           Row {e.row} {e.title ? `· “${e.title}”` : ''}: {e.message}

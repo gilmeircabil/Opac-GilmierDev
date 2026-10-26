@@ -28,7 +28,7 @@ export default function ConfirmDialog({
   return (
     <Modal open={open} onClose={onCancel} title={title} maxWidth="sm">
       <div className="space-y-4 py-1">
-        <div className="text-sm text-slate-600 dark:text-slate-300">{message}</div>
+        <div className="text-sm leading-relaxed text-slate-600">{message}</div>
         <div className="flex justify-end gap-2">
           <Button variant="outline" onClick={onCancel} disabled={loading}>
             {cancelLabel}

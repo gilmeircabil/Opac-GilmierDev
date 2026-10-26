@@ -20,14 +20,14 @@ export default function EmptyState({
   children
 }: EmptyStateProps) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 py-16 text-center dark:border-slate-700">
-      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
-        <Icon className="h-8 w-8 text-primary-500" />
+    <div className="flex flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-200/90 bg-surface/50 px-6 py-16 text-center">
+      <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary-50 shadow-xs ring-1 ring-primary-100">
+        <Icon className="h-8 w-8 text-primary-700" />
       </div>
       <h3 className="text-base font-semibold text-foreground">{title}</h3>
-      {description && <p className="mt-1 max-w-sm text-sm text-muted">{description}</p>}
+      {description && <p className="mt-1.5 max-w-sm text-sm text-muted">{description}</p>}
       {actionLabel && onAction && (
-        <Button className="mt-4" onClick={onAction}>
+        <Button className="mt-5" onClick={onAction}>
           {actionLabel}
         </Button>
       )}

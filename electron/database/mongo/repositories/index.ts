@@ -1,5 +1,5 @@
 import type { MongoDb } from '../client'
-import type { Repositories as BaseRepositories } from '../../pg/repositories'
+import type { Repositories as BaseRepositories } from '../../repositories.types'
 import { mongoUsersRepository } from './users.repository'
 import { mongoSettingsRepository } from './settings.repository'
 import { mongoAuthorsRepository } from './authors.repository'

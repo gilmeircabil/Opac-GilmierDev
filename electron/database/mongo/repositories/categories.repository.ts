@@ -1,7 +1,7 @@
 import type { MongoDb } from '../client'
 import { nowIso, toIso, toBool, toInt, escapeRegex } from './utils'
 import type { Category, CategoryInput, CategoryListItem } from '@shared/types'
-import type { CategoriesRepository } from '../../pg/repositories/categories.repository'
+import type { CategoriesRepository } from '../../repositories.types'
 
 interface CategoryDoc {
   id: number

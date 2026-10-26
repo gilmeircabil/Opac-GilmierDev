@@ -15,7 +15,6 @@ export interface AppDirs {
 export interface SystemDirs {
   root: string
   databaseDir: string
-  pgDataDir: string
   imagesDir: string
   backupsDir: string
   logsDir: string
@@ -57,7 +56,6 @@ export function getSystemDirs(): SystemDirs {
   return {
     root,
     databaseDir,
-    pgDataDir: join(databaseDir, 'pgdata'),
     imagesDir: join(root, 'book-covers'),
     backupsDir: join(root, 'backups'),
     logsDir: join(root, 'logs'),
@@ -78,7 +76,7 @@ export function ensureDirs(dirs: AppDirs): void {
 }
 
 export function ensureSystemDirs(dirs: SystemDirs): void {
-  for (const dir of [dirs.root, dirs.databaseDir, dirs.pgDataDir, dirs.imagesDir, dirs.backupsDir, dirs.logsDir]) {
+  for (const dir of [dirs.root, dirs.databaseDir, dirs.imagesDir, dirs.backupsDir, dirs.logsDir]) {
     mkdirSync(dir, { recursive: true })
   }
 }

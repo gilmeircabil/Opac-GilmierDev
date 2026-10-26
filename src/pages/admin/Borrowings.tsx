@@ -157,23 +157,23 @@ export default function Borrowings() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="flex rounded-lg border border-slate-200 bg-surface p-1 shadow-card dark:border-slate-700">
+        <div className="flex rounded-xl border border-slate-200/80 bg-surface p-1 shadow-card">
           {tabs.map((t) => (
             <button
               key={t.key}
               onClick={() => setStatus(t.key)}
-              className={`ring-focus rounded-md px-3.5 py-1.5 text-sm font-medium transition-colors ${
+              className={`ring-focus rounded-lg px-3.5 py-1.5 text-xs font-semibold transition-all ${
                 status === t.key
-                  ? 'bg-primary-600 text-white'
-                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800'
+                  ? 'bg-primary-900 text-white shadow-xs'
+                  : 'text-slate-600 hover:bg-slate-100 hover:text-foreground'
               }`}
             >
               {t.label}
             </button>
           ))}
         </div>
-        <div className="relative min-w-[180px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <input
             value={search}
             onChange={(e) => {
@@ -181,12 +181,12 @@ export default function Borrowings() {
               setPage(1)
             }}
             placeholder="Search borrower or book…"
-            className="ring-focus w-full rounded-lg border border-slate-300 bg-surface py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted/70 dark:border-slate-600"
+            className="ring-focus w-full rounded-xl border border-slate-200 bg-surface py-2.5 pl-10 pr-4 text-sm text-foreground shadow-xs placeholder:text-muted focus:border-primary-600 focus:ring-4 focus:ring-primary-500/10"
           />
         </div>
       </div>
 
-      {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
 
       {loading ? (
         <Spinner label="Loading borrowings…" full />
@@ -204,41 +204,51 @@ export default function Borrowings() {
         />
       ) : (
         <>
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-card dark:border-slate-700">
+          <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-surface shadow-card">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-muted dark:border-slate-700 dark:bg-slate-800/60">
+              <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs uppercase tracking-wider text-muted">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Book</th>
-                  <th className="px-4 py-3 font-semibold">Borrower</th>
-                  <th className="hidden px-4 py-3 font-semibold md:table-cell">Borrowed</th>
-                  <th className="hidden px-4 py-3 font-semibold md:table-cell">Due</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 text-right font-semibold">Actions</th>
+                  <th className="px-5 py-3.5 font-semibold">Book</th>
+                  <th className="px-5 py-3.5 font-semibold">Borrower</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Borrowed</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Due</th>
+                  <th className="px-5 py-3.5 font-semibold">Status</th>
+                  <th className="px-5 py-3.5 text-right font-semibold">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody className="divide-y divide-slate-100">
                 {items.map((b) => (
-                  <tr key={b.id}>
-                    <td className="px-4 py-3">
+                  <tr
+                    key={b.id}
+                    className={`transition-colors hover:bg-slate-50/70 ${
+                      b.status === 'overdue' ? 'bg-rose-50/40' : ''
+                    }`}
+                  >
+                    <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <BookCover filename={b.book_cover} title={b.book_title ?? 'Book'} sizes="sm" className="shrink-0" />
+                        <BookCover
+                          filename={b.book_cover}
+                          title={b.book_title ?? 'Book'}
+                          sizes="sm"
+                          className="shrink-0 rounded-lg shadow-xs ring-1 ring-slate-900/5"
+                        />
                         <div className="min-w-0">
                           <p className="truncate font-semibold text-foreground">{b.book_title ?? 'Unknown book'}</p>
                           {b.book_call_number && (
-                            <p className="flex items-center gap-1 text-xs text-muted">
+                            <p className="flex items-center gap-1 font-mono text-xs text-muted">
                               <Hash className="h-3 w-3" /> {b.book_call_number}
                             </p>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <p className="font-medium text-foreground">{b.borrower_name}</p>
-                      {b.borrower_id && <p className="text-xs text-muted">ID: {b.borrower_id}</p>}
+                    <td className="px-5 py-3.5">
+                      <p className="font-semibold text-foreground">{b.borrower_name}</p>
+                      {b.borrower_id && <p className="font-mono text-xs text-muted">ID: {b.borrower_id}</p>}
                     </td>
-                    <td className="hidden px-4 py-3 text-muted md:table-cell">{formatPlainDate(b.borrowed_at)}</td>
-                    <td className="hidden px-4 py-3 text-muted md:table-cell">{b.due_date ? formatPlainDate(b.due_date) : '—'}</td>
-                    <td className="px-4 py-3">
+                    <td className="hidden px-5 py-3.5 text-slate-600 md:table-cell">{formatPlainDate(b.borrowed_at)}</td>
+                    <td className="hidden px-5 py-3.5 text-slate-600 md:table-cell">{b.due_date ? formatPlainDate(b.due_date) : '—'}</td>
+                    <td className="px-5 py-3.5">
                       {b.status === 'overdue' ? (
                         <Badge tone="danger">Overdue</Badge>
                       ) : b.status === 'borrowed' ? (
@@ -247,12 +257,12 @@ export default function Borrowings() {
                         <Badge tone="success">Returned</Badge>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-5 py-3.5">
                       <div className="flex justify-end">
                         {b.status === 'borrowed' || b.status === 'overdue' ? (
                           <button
                             onClick={() => setReturnTarget(b)}
-                            className="ring-focus inline-flex items-center gap-1.5 rounded-lg bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-100 dark:bg-primary-900/40 dark:text-primary-300"
+                            className="ring-focus inline-flex items-center gap-1.5 rounded-xl bg-primary-50 px-3.5 py-1.5 text-xs font-semibold text-primary-800 shadow-xs transition-colors hover:bg-primary-100 active:scale-95"
                           >
                             <Undo2 className="h-3.5 w-3.5" /> Mark returned
                           </button>
@@ -274,7 +284,7 @@ export default function Borrowings() {
       <Modal open={open} onClose={() => setOpen(false)} title="New Borrowing" maxWidth="lg">
         <form onSubmit={handleCreate} className="space-y-4">
           {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 dark:bg-red-950/40 dark:text-red-300">
+            <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-600">
               {error}
             </p>
           )}

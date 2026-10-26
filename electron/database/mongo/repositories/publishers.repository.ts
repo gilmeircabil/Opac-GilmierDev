@@ -1,7 +1,7 @@
 import type { MongoDb } from '../client'
 import { nowIso, toIso, toBool, toInt, escapeRegex } from './utils'
 import type { Publisher, PublisherInput, PublisherListItem } from '@shared/types'
-import type { PublishersRepository } from '../../pg/repositories/publishers.repository'
+import type { PublishersRepository } from '../../repositories.types'
 
 interface PublisherDoc {
   id: number

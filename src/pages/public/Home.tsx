@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Search, SlidersHorizontal, LibraryBig, ArrowDownUp, RefreshCw, Server } from 'lucide-react'
+import { Search, SlidersHorizontal, LibraryBig, ArrowDownUp, RefreshCw, Server, X } from 'lucide-react'
 import PublicLayout from '../../layouts/PublicLayout'
 import BookCard from '../../components/BookCard'
 import Spinner from '../../components/ui/Spinner'
@@ -109,6 +109,11 @@ export default function Home() {
     updateUrl({ q: value || null })
   }
 
+  const onClearSearch = () => {
+    setSearchInput('')
+    updateUrl({ q: null })
+  }
+
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current)
     debounceRef.current = setTimeout(() => {
@@ -122,60 +127,76 @@ export default function Home() {
   return (
     <PublicLayout showBack={false}>
       {/* Hero search */}
-      <section className="relative border-b border-border bg-surface">
-        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
-            Find a book in our library
-          </h1>
-          <p className="mt-1.5 text-sm text-muted">
-            Search by title, author, ISBN, subject, or keyword across the whole collection.
-          </p>
-          <form onSubmit={onSearchSubmit} className="mt-5 flex gap-2">
+      <section className="relative border-b border-slate-200/80 bg-gradient-to-b from-indigo-50/50 via-surface to-surface">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
+          <div className="max-w-2xl">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Find a book in our library
+            </h1>
+            <p className="mt-2 text-sm text-muted">
+              Search by title, author, ISBN, subject, or keyword across the collection.
+            </p>
+          </div>
+
+          <form onSubmit={onSearchSubmit} className="mt-6 flex flex-col gap-2.5 sm:flex-row">
             <div className="relative flex-1">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted" />
               <input
                 value={searchInput}
                 onChange={(e) => setSearchInput(e.target.value)}
                 placeholder="Search title, author, ISBN, subject..."
-                className="w-full rounded border border-border bg-surface py-3 pl-12 pr-4 text-sm text-foreground focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                className="w-full rounded-2xl border border-slate-200/90 bg-surface py-3.5 pl-12 pr-10 text-sm text-foreground shadow-card transition-all placeholder:text-muted focus:border-primary-600 focus:outline-none focus:ring-4 focus:ring-primary-500/10"
               />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={onClearSearch}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 rounded-lg p-1 text-muted hover:bg-slate-100 hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
-            <button
-              type="submit"
-              className="rounded bg-primary-900 px-6 text-sm font-semibold text-white"
-            >
-              Search
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/catalog/advanced')}
-              className="inline-flex items-center gap-1.5 rounded border border-border bg-surface px-4 text-sm font-medium text-foreground"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              <span className="hidden sm:inline">Advanced</span>
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="ring-focus inline-flex items-center justify-center rounded-xl bg-primary-900 px-6 py-3.5 text-sm font-semibold text-white shadow-card transition-all hover:bg-primary-800 active:scale-95"
+              >
+                Search
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/catalog/advanced')}
+                className="ring-focus inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200/90 bg-surface px-4 py-3.5 text-sm font-medium text-foreground shadow-card transition-all hover:bg-slate-50 active:scale-95"
+              >
+                <SlidersHorizontal className="h-4 w-4 text-muted" />
+                <span>Advanced</span>
+              </button>
+            </div>
           </form>
 
           {/* Category chips */}
-          <div className="mt-6 flex flex-wrap gap-2">
+          <div className="mt-6 flex flex-wrap items-center gap-2">
+            <span className="mr-1 text-xs font-semibold uppercase tracking-wider text-muted">Browse:</span>
             <button
               onClick={() => onQuickSearch('')}
-              className={`rounded px-4 py-1.5 text-xs font-semibold ${
+              className={`rounded-full px-4 py-1.5 text-xs font-medium transition-all ${
                 !searchQuery && !categoryId
-                  ? 'bg-primary-900 text-white'
-                  : 'bg-surface-2 text-foreground'
+                  ? 'bg-primary-900 text-white shadow-card'
+                  : 'border border-slate-200/80 bg-surface text-slate-600 shadow-xs hover:border-slate-300 hover:bg-slate-50 hover:text-foreground'
               }`}
             >
-              All
+              All Categories
             </button>
             {categories.map((c) => (
               <button
                 key={c.id}
                 onClick={() => updateUrl({ category: String(c.id) })}
-                className={`rounded px-4 py-1.5 text-xs font-semibold ${
+                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-all ${
                   categoryId === String(c.id)
-                    ? 'bg-primary-900 text-white'
-                    : 'bg-surface-2 text-foreground'
+                    ? 'bg-primary-900 text-white shadow-card'
+                    : 'border border-slate-200/80 bg-surface text-slate-600 shadow-xs hover:border-slate-300 hover:bg-slate-50 hover:text-foreground'
                 }`}
               >
                 {c.name}
@@ -186,59 +207,62 @@ export default function Home() {
       </section>
 
       {/* Result bar */}
-      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <p className="text-sm text-muted">
             <span className="font-semibold text-foreground">{loading ? '…' : total}</span> book
             {total === 1 ? '' : 's'} found
             {searchQuery && (
               <>
                 {' '}
-                for “<span className="font-medium text-foreground">{searchQuery}</span>”
+                for “<span className="font-semibold text-foreground">{searchQuery}</span>”
               </>
             )}
           </p>
-          <div className="flex items-center gap-2">
-            <ArrowDownUp className="h-4 w-4 text-muted" />
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-medium text-muted">
+              <ArrowDownUp className="h-3.5 w-3.5" />
+              <span>Sort:</span>
+            </div>
             <Select
               value={sort}
               onChange={(e) => updateUrl({ sort: e.target.value })}
               aria-label="Sort books"
-              className="w-48"
+              className="w-44 text-xs"
             >
               <option value="title_asc">Title A–Z</option>
               <option value="title_desc">Title Z–A</option>
               <option value="author_asc">Author A–Z</option>
-              <option value="year_desc">Newest</option>
-              <option value="year_asc">Oldest</option>
+              <option value="year_desc">Newest First</option>
+              <option value="year_asc">Oldest First</option>
               <option value="recent">Recently Added</option>
             </Select>
             <Select
               value={availability}
               onChange={(e) => updateUrl({ availability: e.target.value })}
               aria-label="Filter by availability"
-              className="w-40"
+              className="w-38 text-xs"
             >
               <option value="all">All Availability</option>
-              <option value="available">Available</option>
-              <option value="unavailable">Unavailable</option>
+              <option value="available">Available Only</option>
+              <option value="unavailable">Unavailable Only</option>
             </Select>
           </div>
         </div>
 
         {/* Body */}
         {error ? (
-          <div className="flex flex-col items-center justify-center py-10 text-center">
+          <div className="flex flex-col items-center justify-center py-12 text-center">
             <EmptyState
               icon={LibraryBig}
               title="Connecting to Library..."
               description="Waiting for the library server to respond. Retrying automatically..."
             />
-            <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
               <button
                 type="button"
                 onClick={() => triggerRefresh()}
-                className="ring-focus inline-flex items-center gap-2 rounded-xl bg-primary-600 px-5 py-2.5 text-xs font-semibold text-white shadow-card transition-colors hover:bg-primary-700 active:scale-95"
+                className="ring-focus inline-flex items-center gap-2 rounded-xl bg-primary-900 px-5 py-2.5 text-xs font-semibold text-white shadow-card transition-all hover:bg-primary-800 active:scale-95"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
                 <span>Retry Now</span>
@@ -246,7 +270,7 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setConnOpen(true)}
-                className="ring-focus inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-surface px-5 py-2.5 text-xs font-semibold text-foreground shadow-card transition-colors hover:bg-slate-50 active:scale-95"
+                className="ring-focus inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-surface px-5 py-2.5 text-xs font-semibold text-foreground shadow-card transition-all hover:bg-slate-50 active:scale-95"
               >
                 <Server className="h-3.5 w-3.5 text-primary-600" />
                 <span>Configure Server URL</span>
@@ -262,29 +286,33 @@ export default function Home() {
         ) : loading ? (
           <Spinner label="Loading books..." full />
         ) : books.length === 0 ? (
-          <EmptyState
-            icon={LibraryBig}
-            title="No books found"
-            description={
-              searchQuery || categoryId
-                ? 'Try another search or clear the filters.'
-                : 'The library catalog is empty.'
-            }
-          />
+          <div className="py-12">
+            <EmptyState
+              icon={LibraryBig}
+              title="No books found"
+              description={
+                searchQuery || categoryId
+                  ? 'Try another search or clear your filters to view more books.'
+                  : 'The library catalog is currently empty.'
+              }
+            />
+          </div>
         ) : (
           <>
-            <div className="mt-4 grid animate-fade-in grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-5">
+            <div className="mt-6 grid animate-fade-in grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {books.map((book) => (
                 <BookCard key={book.id} book={book} />
               ))}
             </div>
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              total={total}
-              pageSize={PAGE_SIZES[0]}
-              onPageChange={(p) => updateUrl({ page: String(p) })}
-            />
+            <div className="mt-8">
+              <Pagination
+                page={page}
+                totalPages={totalPages}
+                total={total}
+                pageSize={PAGE_SIZES[0]}
+                onPageChange={(p) => updateUrl({ page: String(p) })}
+              />
+            </div>
           </>
         )}
       </div>

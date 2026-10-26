@@ -87,7 +87,6 @@ export async function runSmoke(options: SmokeOptions): Promise<void> {
   const dirs: SystemDirs = {
     root,
     databaseDir: join(root, 'database'),
-    pgDataDir: join(root, 'database', 'pgdata'),
     imagesDir: join(root, 'book-covers'),
     backupsDir: join(root, 'backups'),
     logsDir: join(root, 'logs'),

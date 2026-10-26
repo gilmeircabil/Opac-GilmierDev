@@ -13,14 +13,15 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_CLASSES: Record<Variant, string> = {
   primary:
-    'bg-primary-600 text-white hover:bg-primary-700 active:bg-primary-800 disabled:bg-primary-300 dark:disabled:bg-primary-700',
+    'bg-primary-900 text-white hover:bg-primary-800 active:bg-primary-950 shadow-sm disabled:opacity-50 disabled:pointer-events-none',
   secondary:
-    'bg-slate-100 text-slate-800 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700',
+    'bg-slate-100 text-slate-800 hover:bg-slate-200/80 active:bg-slate-300/80 disabled:opacity-50',
   outline:
-    'border border-slate-300 bg-transparent text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-800',
+    'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-slate-300 active:bg-slate-100 shadow-sm disabled:opacity-50',
   ghost:
-    'bg-transparent text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800',
-  danger: 'bg-red-600 text-white hover:bg-red-700 active:bg-red-800'
+    'bg-transparent text-slate-600 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-50',
+  danger:
+    'bg-rose-600 text-white hover:bg-rose-700 active:bg-rose-800 shadow-sm disabled:opacity-50'
 }
 
 const SIZE_CLASSES: Record<NonNullable<ButtonProps['size']>, string> = {
@@ -42,10 +43,10 @@ export default function Button({
   return (
     <button
       className={classNames(
-        'ring-focus inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors',
+        'ring-focus inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all duration-150',
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],
-        loading && 'cursor-not-allowed',
+        loading && 'cursor-not-allowed opacity-75',
         className
       )}
       disabled={disabled || loading}

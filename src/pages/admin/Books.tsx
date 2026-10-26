@@ -145,22 +145,24 @@ export default function Books() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setImportOpen(true)}
-            className="ring-focus inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-surface px-4 py-2 text-sm font-semibold text-foreground shadow-card transition-colors hover:bg-slate-50 dark:border-slate-600 dark:hover:bg-slate-800"
+            className="ring-focus inline-flex items-center gap-2 rounded-xl border border-slate-200/90 bg-surface px-4 py-2.5 text-sm font-semibold text-foreground shadow-card transition-all hover:bg-slate-50 active:scale-95"
           >
-            <FileSpreadsheet className="h-4 w-4 text-primary-600 dark:text-primary-400" /> Import
+            <FileSpreadsheet className="h-4 w-4 text-primary-700" />
+            <span>Import</span>
           </button>
           <button
             onClick={openNewBook}
-            className="ring-focus inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-semibold text-white hover:bg-primary-700"
+            className="ring-focus inline-flex items-center gap-2 rounded-xl bg-primary-900 px-4 py-2.5 text-sm font-semibold text-white shadow-card transition-all hover:bg-primary-800 active:scale-95"
           >
-            <Plus className="h-4 w-4" /> Add Book
+            <Plus className="h-4 w-4" />
+            <span>Add Book</span>
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-surface p-3 shadow-card dark:border-slate-700">
-        <div className="relative min-w-[180px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+      <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200/80 bg-surface p-4 shadow-card">
+        <div className="relative min-w-[200px] flex-1">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <input
             value={search}
             onChange={(e) => {
@@ -168,7 +170,7 @@ export default function Books() {
               setPage(1)
             }}
             placeholder="Search title, author, ISBN…"
-            className="ring-focus w-full rounded-lg border border-slate-300 bg-surface py-2 pl-9 pr-8 text-sm text-foreground placeholder:text-muted/70 dark:border-slate-600"
+            className="ring-focus w-full rounded-xl border border-slate-200 bg-surface py-2.5 pl-10 pr-9 text-sm text-foreground shadow-xs placeholder:text-muted focus:border-primary-600 focus:ring-4 focus:ring-primary-500/10"
           />
           {search && (
             <button
@@ -176,31 +178,31 @@ export default function Books() {
                 setSearch('')
                 setPage(1)
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-0.5 text-muted hover:bg-slate-100 hover:text-foreground"
               aria-label="Clear search"
             >
               <X className="h-4 w-4" />
             </button>
           )}
         </div>
-        <Select value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setPage(1) }} className="w-44" aria-label="Filter by category">
+        <Select value={categoryId} onChange={(e) => { setCategoryId(e.target.value); setPage(1) }} className="w-44 text-xs" aria-label="Filter by category">
           <option value="">All Categories</option>
           {categories.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </Select>
-        <Select value={authorId} onChange={(e) => { setAuthorId(e.target.value); setPage(1) }} className="w-44" aria-label="Filter by author">
+        <Select value={authorId} onChange={(e) => { setAuthorId(e.target.value); setPage(1) }} className="w-44 text-xs" aria-label="Filter by author">
           <option value="">All Authors</option>
           {authors.map((a) => (
             <option key={a.id} value={a.id}>{a.name}</option>
           ))}
         </Select>
-        <Select value={availability} onChange={(e) => { setAvailability(e.target.value as BookFilters['availability']); setPage(1) }} className="w-40" aria-label="Filter by availability">
+        <Select value={availability} onChange={(e) => { setAvailability(e.target.value as BookFilters['availability']); setPage(1) }} className="w-40 text-xs" aria-label="Filter by availability">
           <option value="all">All Availability</option>
           <option value="available">Available</option>
           <option value="unavailable">Unavailable</option>
         </Select>
-        <label className="flex items-center gap-2 text-sm text-muted">
+        <label className="flex items-center gap-2 text-xs font-medium text-muted">
           <input
             type="checkbox"
             checked={includeArchived}
@@ -208,13 +210,13 @@ export default function Books() {
               setIncludeArchived(e.target.checked)
               setPage(1)
             }}
-            className="ring-focus h-4 w-4 rounded border-slate-300 text-primary-600"
+            className="ring-focus h-4 w-4 rounded border-slate-300 text-primary-900"
           />
           Include archived
         </label>
       </div>
 
-      {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
 
       {loading ? (
         <Spinner label="Loading books…" full />
@@ -228,67 +230,67 @@ export default function Books() {
         />
       ) : (
         <>
-          <div className="overflow-hidden rounded-xl border border-slate-200 bg-surface shadow-card dark:border-slate-700">
+          <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-surface shadow-card">
             <table className="w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-muted dark:border-slate-700 dark:bg-slate-800/60">
+              <thead className="border-b border-slate-200/80 bg-slate-50/80 text-xs uppercase tracking-wider text-muted">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Title</th>
-                  <th className="hidden px-4 py-3 font-semibold md:table-cell">Author</th>
-                  <th className="hidden px-4 py-3 font-semibold lg:table-cell">Category</th>
-                  <th className="px-4 py-3 font-semibold">Copies</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 text-right font-semibold">
+                  <th className="px-5 py-3.5 font-semibold">Title</th>
+                  <th className="hidden px-5 py-3.5 font-semibold md:table-cell">Author</th>
+                  <th className="hidden px-5 py-3.5 font-semibold lg:table-cell">Category</th>
+                  <th className="px-5 py-3.5 font-semibold">Copies</th>
+                  <th className="px-5 py-3.5 font-semibold">Status</th>
+                  <th className="px-5 py-3.5 text-right font-semibold">
                     <span className="inline-flex items-center gap-1"><ArrowUpDown className="h-3 w-3" /> Actions</span>
                   </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+              <tbody className="divide-y divide-slate-100">
                 {books.map((book) => (
-                  <tr key={book.id} className={book.is_archived ? 'opacity-60' : ''}>
-                    <td className="px-4 py-3">
+                  <tr key={book.id} className={`transition-colors hover:bg-slate-50/70 ${book.is_archived ? 'opacity-60' : ''}`}>
+                    <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
-                        <BookCover filename={book.cover_image} title={book.title} sizes="sm" className="shrink-0" />
+                        <BookCover filename={book.cover_image} title={book.title} sizes="sm" className="shrink-0 rounded-lg shadow-xs ring-1 ring-slate-900/5" />
                         <div className="min-w-0">
                           <p className="truncate font-semibold text-foreground">{book.title}</p>
-                          {book.isbn && <p className="text-xs text-muted">ISBN: {book.isbn}</p>}
+                          {book.isbn && <p className="font-mono text-xs text-muted">ISBN: {book.isbn}</p>}
                           {book.is_archived && <Badge tone="muted" className="mt-1">Archived</Badge>}
                         </div>
                       </div>
                     </td>
-                    <td className="hidden px-4 py-3 text-slate-600 dark:text-slate-300 md:table-cell">
+                    <td className="hidden px-5 py-3.5 text-slate-600 md:table-cell">
                       {book.author_name ?? '—'}
                     </td>
-                    <td className="hidden px-4 py-3 lg:table-cell">{book.category_name ?? '—'}</td>
-                    <td className="px-4 py-3">
+                    <td className="hidden px-5 py-3.5 text-slate-600 lg:table-cell">{book.category_name ?? '—'}</td>
+                    <td className="px-5 py-3.5">
                       <span className="font-semibold text-foreground">{book.available_copies}</span>
                       <span className="text-muted"> / {book.total_copies}</span>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-5 py-3.5">
                       {book.available ? (
                         <Badge tone="success">Available</Badge>
                       ) : (
                         <Badge tone="danger">Unavailable</Badge>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-5 py-3.5">
                       <div className="flex justify-end gap-1">
                         <button
                           onClick={() => openEditBook(book.id)}
-                          className="ring-focus rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-primary-600"
+                          className="ring-focus rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-primary-700"
                           title="Edit"
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => setTarget(book)}
-                          className="ring-focus rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-amber-600"
+                          className="ring-focus rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-amber-600"
                           title={book.is_archived ? 'Restore' : 'Archive'}
                         >
                           <ArchiveRestore className="h-4 w-4" />
                         </button>
                         <button
                           onClick={() => setDeleteTarget(book)}
-                          className="ring-focus rounded-lg p-2 text-slate-500 hover:bg-red-50 hover:text-red-600"
+                          className="ring-focus rounded-xl p-2 text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600"
                           title="Delete book permanently"
                         >
                           <Trash2 className="h-4 w-4" />

@@ -1,5 +1,5 @@
 import type { MongoDb } from '../client'
-import type { SettingsRepository } from '../../pg/repositories/settings.repository'
+import type { SettingsRepository } from '../../repositories.types'
 
 interface SettingDoc {
   key: string

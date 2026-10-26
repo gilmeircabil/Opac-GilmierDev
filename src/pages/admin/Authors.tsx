@@ -109,16 +109,16 @@ export default function Authors() {
       </div>
 
       <div className="relative max-w-sm">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
+        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search authors…"
-          className="ring-focus w-full rounded-lg border border-slate-300 bg-surface py-2 pl-9 pr-3 text-sm text-foreground placeholder:text-muted/70 dark:border-slate-600"
+          className="ring-focus w-full rounded-xl border border-slate-200 bg-surface py-2.5 pl-10 pr-4 text-sm text-foreground shadow-xs placeholder:text-muted focus:border-primary-600 focus:ring-4 focus:ring-primary-500/10"
         />
       </div>
 
-      {error && <p className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
+      {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">{error}</p>}
 
       {loading ? (
         <Spinner label="Loading authors…" full />
@@ -139,29 +139,29 @@ export default function Authors() {
           {filtered.map((author) => (
             <div
               key={author.id}
-              className={`flex flex-col rounded-xl border border-slate-200 bg-surface p-4 shadow-card dark:border-slate-700 ${
+              className={`flex flex-col rounded-2xl border border-slate-200/80 bg-surface p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lifted ${
                 author.is_archived ? 'opacity-60' : ''
               }`}
             >
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <h3 className="truncate font-semibold text-foreground">{author.name}</h3>
-                  <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted">
-                    <BookOpen className="h-3 w-3" />
-                    {author.book_count} book{author.book_count === 1 ? '' : 's'}
+                  <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-muted">
+                    <BookOpen className="h-3.5 w-3.5 text-primary-600" />
+                    <span className="font-medium text-foreground">{author.book_count}</span> book{author.book_count === 1 ? '' : 's'}
                   </p>
                 </div>
                 <div className="flex shrink-0 gap-1">
                   <button
                     onClick={() => openEdit(author)}
-                    className="ring-focus rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-primary-600 dark:hover:bg-slate-800"
+                    className="ring-focus rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-primary-700"
                     title="Edit"
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setArchiveTarget(author)}
-                    className="ring-focus rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                    className="ring-focus rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100"
                     title={author.is_archived ? 'Restore' : 'Archive'}
                   >
                     {author.is_archived ? (
@@ -173,12 +173,12 @@ export default function Authors() {
                 </div>
               </div>
               {author.biography && (
-                <p className="mt-2 line-clamp-3 text-sm text-slate-600 dark:text-slate-300">
+                <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-slate-600">
                   {author.biography}
                 </p>
               )}
               {author.is_archived && (
-                <p className="mt-2 text-xs font-medium text-muted">Archived</p>
+                <p className="mt-3 text-xs font-semibold uppercase tracking-wider text-muted">Archived</p>
               )}
             </div>
           ))}
@@ -188,7 +188,7 @@ export default function Authors() {
       <Modal open={open} onClose={() => setOpen(false)} title={editingId ? 'Edit Author' : 'Add Author'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm font-medium text-red-600 dark:bg-red-950/40 dark:text-red-300">
+            <p className="rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-600">
               {error}
             </p>
           )}

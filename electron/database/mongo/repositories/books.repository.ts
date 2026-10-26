@@ -1,7 +1,7 @@
 import type { MongoDb } from '../client'
 import { nowIso, toIso, toBool, toInt, escapeRegex } from './utils'
 import type { Book, BookFilters, BookInput, DashboardStats, Paginated } from '@shared/types'
-import type { BooksRepository } from '../../pg/repositories/books.repository'
+import type { BooksRepository } from '../../repositories.types'
 
 export interface BookDoc {
   id: number

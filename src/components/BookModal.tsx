@@ -212,11 +212,13 @@ export default function BookModal({ open, onClose, onSuccess, bookId }: BookModa
           )}
 
           {/* Cover image upload */}
-          <div className="flex items-start gap-4 rounded-xl border border-slate-100 bg-slate-50/50 p-3">
+          <div className="flex items-start gap-4 rounded-2xl border border-slate-200/80 bg-slate-50/60 p-4">
             {fields.cover_image ? (
-              <BookCover filename={fields.cover_image} title={fields.title || 'Cover'} sizes="lg" />
+              <div className="overflow-hidden rounded-xl shadow-xs ring-1 ring-slate-900/5">
+                <BookCover filename={fields.cover_image} title={fields.title || 'Cover'} sizes="lg" />
+              </div>
             ) : (
-              <div className="flex h-32 w-24 flex-col items-center justify-center gap-1.5 rounded-lg border border-dashed border-slate-300 text-muted">
+              <div className="flex h-32 w-24 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 text-muted">
                 <ImageIcon className="h-6 w-6 text-muted/60" />
                 <span className="text-[11px]">No cover</span>
               </div>

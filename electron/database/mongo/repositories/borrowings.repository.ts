@@ -1,7 +1,7 @@
 import type { MongoDb } from '../client'
 import { nowIso, toIso, toInt } from './utils'
 import type { Borrowing, BorrowingFilters, BorrowingInput, Paginated } from '@shared/types'
-import type { BorrowingsRepository } from '../../pg/repositories/borrowings.repository'
+import type { BorrowingsRepository } from '../../repositories.types'
 import type { BookDoc } from './books.repository'
 
 export interface BorrowingDoc {

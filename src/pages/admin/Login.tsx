@@ -141,21 +141,21 @@ export default function Login() {
       <div className="w-full max-w-sm animate-rise-in">
         <div className="mb-6 flex flex-col items-center text-center">
           {logo ? (
-            <img src={logo} alt="Library logo" className="h-20 w-20 rounded-2xl object-cover shadow-lifted ring-1 ring-slate-200 dark:ring-slate-700" />
+            <img src={logo} alt="Library logo" className="h-20 w-20 rounded-2xl object-cover shadow-lifted ring-1 ring-slate-900/10" />
           ) : (
-            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-500 to-primary-800 shadow-glow">
+            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-800 to-primary-950 shadow-glow">
               <LibraryBig className="h-10 w-10 text-white" />
             </div>
           )}
           <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground">{settings.library_name}</h1>
-          <p className="text-sm font-medium text-primary-600 dark:text-primary-400">
+          <p className="mt-1 text-sm font-medium text-primary-700">
             {mode === 'setup' ? 'Create the administrator account' : 'Administrator sign in'}
           </p>
         </div>
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border border-slate-200 bg-surface p-6 shadow-lifted dark:border-slate-700"
+          className="rounded-3xl border border-slate-200/80 bg-surface p-7 shadow-lifted"
         >
           {mode === 'setup' && (
             <Input
@@ -211,7 +211,7 @@ export default function Login() {
                   setNewPass('')
                   setConfirmNewPass('')
                 }}
-                className="ring-focus text-xs font-medium text-primary-600 hover:underline"
+                className="ring-focus text-xs font-semibold text-primary-700 hover:underline"
               >
                 Forgot password?
               </button>
@@ -231,25 +231,25 @@ export default function Login() {
           )}
 
           {error && (
-            <p className="mt-3 rounded-lg bg-red-50 px-3 py-2 text-xs font-medium text-red-600 dark:bg-red-950/40 dark:text-red-300">
+            <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs font-medium text-red-600">
               {error}
             </p>
           )}
 
-          <Button type="submit" className="mt-4 w-full" disabled={busy} icon={<ShieldCheck className="h-4 w-4" />}>
+          <Button type="submit" className="mt-5 w-full" disabled={busy} icon={<ShieldCheck className="h-4 w-4" />}>
             {busy ? 'Please wait…' : mode === 'setup' ? 'Create Account & Continue' : 'Sign In'}
           </Button>
         </form>
 
-        <div className="mt-4 flex flex-wrap items-center justify-center gap-4 text-xs text-muted">
-          <Link to="/catalog" className="ring-focus inline-flex items-center gap-1.5 hover:text-foreground">
-            <LibraryBig className="h-3.5 w-3.5 text-primary-500" /> View public catalog
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-4 text-xs text-muted">
+          <Link to="/catalog" className="ring-focus inline-flex items-center gap-1.5 transition-colors hover:text-foreground">
+            <LibraryBig className="h-3.5 w-3.5 text-primary-600" /> View public catalog
           </Link>
           <span>·</span>
           <button
             type="button"
             onClick={() => setConnModalOpen(true)}
-            className="ring-focus inline-flex items-center gap-1.5 font-medium text-primary-600 hover:underline dark:text-primary-400"
+            className="ring-focus inline-flex items-center gap-1.5 font-medium text-primary-700 hover:underline"
           >
             <Database className="h-3.5 w-3.5" /> MongoDB / Remote Server
           </button>

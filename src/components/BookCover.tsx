@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { BookImage, Library } from 'lucide-react'
+import { BookImage, BookOpen } from 'lucide-react'
 import { imageUrl, classNames } from '../lib/utils'
 
 interface BookCoverProps {
@@ -11,9 +11,9 @@ interface BookCoverProps {
 
 const SIZES: Record<NonNullable<BookCoverProps['sizes']>, string> = {
   sm: 'h-24 w-16 text-[10px]',
-  md: 'h-32 w-22 text-xs',
-  lg: 'h-40 w-28 text-sm',
-  xl: 'h-56 w-40 text-sm'
+  md: 'h-36 w-24 text-xs',
+  lg: 'h-48 w-32 text-sm',
+  xl: 'h-64 w-44 text-sm'
 }
 
 export default function BookCover({ filename, title, className, sizes = 'md' }: BookCoverProps) {
@@ -26,14 +26,13 @@ export default function BookCover({ filename, title, className, sizes = 'md' }: 
         role="img"
         aria-label={`Cover of ${title}`}
         className={classNames(
-          'flex flex-col items-center justify-center gap-2 rounded-lg border border-slate-200 bg-gradient-to-br from-primary-50 to-primary-100 p-3 text-center',
-          'dark:from-slate-800 dark:to-primary-900/40 dark:border-slate-700',
+          'flex flex-col items-center justify-center gap-2 rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/90 to-indigo-100/60 p-2.5 text-center shadow-sm select-none',
           SIZES[sizes],
           className
         )}
       >
-        <Library className="h-1/3 w-1/3 max-h-10 text-primary-400" />
-        <span className="line-clamp-3 font-medium text-primary-700 dark:text-primary-300">
+        <BookOpen className="h-1/3 w-1/3 max-h-8 text-indigo-400" />
+        <span className="line-clamp-2 px-1 font-semibold leading-tight text-indigo-900">
           {title}
         </span>
       </div>
@@ -47,7 +46,7 @@ export default function BookCover({ filename, title, className, sizes = 'md' }: 
       loading="lazy"
       onError={() => setFailed(true)}
       className={classNames(
-        'rounded-lg border border-slate-200 object-cover shadow-card dark:border-slate-700',
+        'rounded-xl border border-slate-200/80 object-cover shadow-sm transition-shadow',
         SIZES[sizes],
         className
       )}

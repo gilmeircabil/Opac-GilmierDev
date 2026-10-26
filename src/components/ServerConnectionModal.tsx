@@ -202,13 +202,13 @@ export default function ServerConnectionModal({
       maxWidth="md"
     >
       {isAdmin && (
-        <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+        <div className="mb-4 grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1">
           <button
             type="button"
             onClick={() => setTab('mongodb')}
             className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition ${
               tab === 'mongodb'
-                ? 'bg-white text-primary-700 shadow-sm dark:bg-slate-900 dark:text-primary-400'
+                ? 'bg-white text-primary-900 shadow-sm'
                 : 'text-muted hover:text-foreground'
             }`}
           >
@@ -220,7 +220,7 @@ export default function ServerConnectionModal({
             onClick={() => setTab('server')}
             className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition ${
               tab === 'server'
-                ? 'bg-white text-primary-700 shadow-sm dark:bg-slate-900 dark:text-primary-400'
+                ? 'bg-white text-primary-900 shadow-sm'
                 : 'text-muted hover:text-foreground'
             }`}
           >
@@ -232,7 +232,7 @@ export default function ServerConnectionModal({
 
       {tab === 'mongodb' && isAdmin ? (
         <form onSubmit={handleSaveMongo} className="space-y-4">
-          <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-3.5 text-xs text-primary-900 dark:border-primary-900/40 dark:bg-primary-950/30 dark:text-primary-200">
+          <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-3.5 text-xs text-primary-900">
             <p className="flex items-center gap-1.5 font-semibold">
               <Database className="h-4 w-4 text-primary-600" /> Local MongoDB or MongoDB Atlas ($0 Free)
             </p>
@@ -265,7 +265,7 @@ export default function ServerConnectionModal({
                 setMongoUri('mongodb://127.0.0.1:27017/opac')
                 setMongoDbName('opac')
               }}
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800"
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-medium text-foreground hover:bg-slate-100"
             >
               <Laptop className="h-3 w-3" /> Use Local PC (127.0.0.1:27017)
             </button>
@@ -273,10 +273,10 @@ export default function ServerConnectionModal({
 
           {mongoStatus && (
             <div
-              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium ${
+              className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium ${
                 mongoStatus.ok
-                  ? 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300'
-                  : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300'
+                  ? 'bg-green-50 text-green-700'
+                  : 'bg-red-50 text-red-600'
               }`}
             >
               {mongoStatus.ok ? (
@@ -288,7 +288,7 @@ export default function ServerConnectionModal({
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+          <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
             <Button type="button" variant="outline" size="sm" onClick={handleTestMongo} loading={mongoBusy}>
               Test MongoDB
             </Button>
@@ -304,7 +304,7 @@ export default function ServerConnectionModal({
         </form>
       ) : (
         <form onSubmit={handleSaveServer} className="space-y-4">
-          <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-3.5 text-xs text-primary-900 dark:border-primary-900/40 dark:bg-primary-950/30 dark:text-primary-200">
+          <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-3.5 text-xs text-primary-900">
             <p className="flex items-center gap-1.5 font-semibold">
               <Server className="h-4 w-4 text-primary-600" /> Connect from Anywhere (Home PC, LAN, or Tunnel)
             </p>
@@ -336,10 +336,10 @@ export default function ServerConnectionModal({
 
           {serverStatus && (
             <div
-              className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium ${
+              className={`flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium ${
                 serverStatus.ok
-                  ? 'bg-green-50 text-green-700 dark:bg-green-950/40 dark:text-green-300'
-                  : 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-300'
+                  ? 'bg-green-50 text-green-700'
+                  : 'bg-red-50 text-red-600'
               }`}
             >
               {serverStatus.ok ? (
@@ -351,7 +351,7 @@ export default function ServerConnectionModal({
             </div>
           )}
 
-          <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3 dark:border-slate-800">
+          <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-3">
             <div className="flex items-center gap-2">
               <Button type="button" variant="outline" size="sm" onClick={handleTestServer} loading={serverBusy}>
                 Test Server
