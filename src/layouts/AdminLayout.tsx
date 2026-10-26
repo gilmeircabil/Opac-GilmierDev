@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '../stores/app'
 import { classNames, imageUrl, errorMessage } from '../lib/utils'
+import appLogo from '../assets/logo.png'
 
 const NAV: { label: string; items: { to: string; label: string; icon: React.ElementType; end: boolean }[] }[] = [
   {
@@ -45,7 +46,7 @@ export default function AdminLayout() {
   const navigate = useNavigate()
   const user = useAppStore((s) => s.user)
   const settings = useAppStore((s) => s.settings)
-  const logo = imageUrl(settings.library_logo)
+  const logo = imageUrl(settings.library_logo) || appLogo
 
   useEffect(() => {
     if (!user) {

@@ -49,6 +49,10 @@ function enableIpcSenderValidation(): void {
 }
 
 function createWindow(): void {
+  const iconPath = join(__dirname, '../../build/icon.ico')
+  const iconPng = join(__dirname, '../../build/icon.png')
+  const windowIcon = existsSync(iconPath) ? iconPath : existsSync(iconPng) ? iconPng : undefined
+
   mainWindow = new BrowserWindow({
     width: 1366,
     height: 800,
@@ -58,6 +62,7 @@ function createWindow(): void {
     title: 'OPAC Library System',
     autoHideMenuBar: true,
     backgroundColor: '#f8fafc',
+    icon: windowIcon,
     webPreferences: {
       preload: join(__dirname, '../preload/preload.js'),
       contextIsolation: true,

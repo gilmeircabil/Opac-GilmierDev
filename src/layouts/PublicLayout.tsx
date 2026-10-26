@@ -4,6 +4,7 @@ import { LibraryBig, Lock, X, BookMarked, RefreshCw, Server } from 'lucide-react
 import { useAppStore } from '../stores/app'
 import { imageUrl } from '../lib/utils'
 import ServerConnectionModal from '../components/ServerConnectionModal'
+import appLogo from '../assets/logo.png'
 
 interface PublicLayoutProps {
   children: ReactNode
@@ -14,7 +15,7 @@ export default function PublicLayout({ children, showBack = false }: PublicLayou
   const settings = useAppStore((s) => s.settings)
   const mode = useAppStore((s) => s.mode)
   const triggerRefresh = useAppStore((s) => s.triggerRefresh)
-  const logo = imageUrl(settings.library_logo)
+  const logo = imageUrl(settings.library_logo) || appLogo
   const location = useLocation()
   const isUser = mode === 'user'
   const [refreshing, setRefreshing] = useState(false)

@@ -8,6 +8,7 @@ import Modal from '../../components/ui/Modal'
 import Spinner from '../../components/ui/Spinner'
 import ServerConnectionModal from '../../components/ServerConnectionModal'
 import { imageUrl, errorMessage } from '../../lib/utils'
+import appLogo from '../../assets/logo.png'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -58,7 +59,7 @@ export default function Login() {
     checkSetupMode()
   }, [])
 
-  const logo = imageUrl(settings.library_logo)
+  const logo = imageUrl(settings.library_logo) || appLogo
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

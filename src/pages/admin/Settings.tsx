@@ -27,6 +27,7 @@ import Spinner from '../../components/ui/Spinner'
 import ServerConnectionModal from '../../components/ServerConnectionModal'
 import type { BackupFile, DatabaseStatus, ServerStatus } from '@shared/types'
 import { errorMessage, formatDate, formatFileSize, imageUrl } from '../../lib/utils'
+import appLogo from '../../assets/logo.png'
 
 export default function SettingsPage() {
   const settings = useAppStore((s) => s.settings)
@@ -225,7 +226,7 @@ export default function SettingsPage() {
     }
   }
 
-  const logo = imageUrl(settings.library_logo)
+  const logo = imageUrl(settings.library_logo) || appLogo
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -321,10 +322,10 @@ export default function SettingsPage() {
             </Button>
             {settings.library_logo && (
               <Button type="button" variant="ghost" size="sm" onClick={removeLogo} icon={<Trash2 className="h-4 w-4" />}>
-                Remove logo
+                Reset to default logo
               </Button>
             )}
-            <p className="max-w-xs text-xs text-muted">Shown on the start screen and app headers. JPG, PNG or WEBP up to 12 MB.</p>
+            <p className="max-w-xs text-xs text-muted">Shown on start screens, window header and public catalog. JPG, PNG or WEBP up to 12 MB.</p>
           </div>
         </div>
         <form onSubmit={saveLibraryInfo} className="space-y-4">
