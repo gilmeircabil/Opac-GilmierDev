@@ -11,7 +11,8 @@ import {
   Lock,
   Eye,
   EyeOff,
-  KeyRound
+  KeyRound,
+  Radio
 } from 'lucide-react'
 import Modal from './ui/Modal'
 import Input from './ui/Input'
@@ -49,6 +50,8 @@ export default function ServerConnectionModal({
   // Remote Server connection state
   const [host, setHost] = useState('127.0.0.1')
   const [port, setPort] = useState('47821')
+  const [remoteTunnelUrl, setRemoteTunnelUrl] = useState('')
+  const [discoverBusy, setDiscoverBusy] = useState(false)
   const [serverBusy, setServerBusy] = useState(false)
   const [serverStatus, setServerStatus] = useState<{ ok: boolean; text: string } | null>(null)
 
@@ -80,9 +83,11 @@ export default function ServerConnectionModal({
         if (c && c.host) {
           setHost(c.host)
           setPort(String(c.port || 47821))
+          setRemoteTunnelUrl(c.remote_url || '')
         } else {
           setHost('127.0.0.1')
           setPort('47821')
+          setRemoteTunnelUrl('')
         }
       })
       .catch(() => undefined)
@@ -172,6 +177,43 @@ export default function ServerConnectionModal({
     }
   }
 
+  const handleAutoDiscover = async () => {
+    setDiscoverBusy(true)
+    setServerStatus(null)
+    try {
+      const res = await window.api.connection.discover()
+      if (res.found && res.servers.length > 0) {
+        const target = res.servers.find((s) => s.host !== '127.0.0.1') || res.servers[0]
+        
+        // If Cloudflare URL is broadcasted and user previously used trycloudflare, or LAN
+        if (target.remote_url && /trycloudflare\.com/i.test(host)) {
+          setHost(target.remote_url)
+        } else {
+          setHost(target.host)
+          setPort(String(target.port || 47821))
+        }
+
+        if (target.remote_url) {
+          setRemoteTunnelUrl(target.remote_url)
+        }
+
+        setServerStatus({
+          ok: true,
+          text: `Found "${target.library_name}" at ${target.host}:${target.port}${target.remote_url ? ` · Tunnel: ${target.remote_url}` : ''}`
+        })
+      } else {
+        setServerStatus({
+          ok: false,
+          text: 'No active OPAC library server detected on the local network. Make sure the server is turned on.'
+        })
+      }
+    } catch (err) {
+      setServerStatus({ ok: false, text: errorMessage(err) })
+    } finally {
+      setDiscoverBusy(false)
+    }
+  }
+
   const handleSaveServer = async (e: React.FormEvent) => {
     e.preventDefault()
     setServerBusy(true)
@@ -179,8 +221,15 @@ export default function ServerConnectionModal({
     try {
       const cleanHost = host.trim() || '127.0.0.1'
       const parsedPort = isUrlWithScheme && cleanHost.startsWith('https://') ? 443 : Number(port) || 47821
-      const cfg = { host: cleanHost, port: parsedPort }
+      const cfg = {
+        host: cleanHost,
+        port: parsedPort,
+        remote_url: remoteTunnelUrl.trim() || undefined
+      }
       await window.api.connection.save(cfg)
+      if (isAdmin && window.api.connection.setRemoteUrl) {
+        await window.api.connection.setRemoteUrl(remoteTunnelUrl.trim() || null)
+      }
       setConnection(cfg)
 
       try {
@@ -445,14 +494,45 @@ export default function ServerConnectionModal({
                 </p>
               </div>
 
+              <div className="flex items-center justify-between pt-1">
+                <span className="text-xs font-semibold text-foreground">Server Host / Tunnel URL *</span>
+                <button
+                  type="button"
+                  onClick={handleAutoDiscover}
+                  disabled={discoverBusy}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-indigo-200 bg-indigo-50/70 px-2.5 py-1 text-[11px] font-semibold text-indigo-700 hover:bg-indigo-100/80 active:scale-95 transition disabled:opacity-60"
+                  title="Scan local network for active OPAC servers"
+                >
+                  <Radio className={`h-3 w-3 ${discoverBusy ? 'animate-pulse text-indigo-500' : 'text-indigo-600'}`} />
+                  <span>{discoverBusy ? 'Scanning Network...' : 'Auto-Detect Server'}</span>
+                </button>
+              </div>
+
               <Input
-                label="Server Host / Tunnel URL *"
                 name="host"
                 value={host}
                 onChange={(e) => setHost(e.target.value)}
                 placeholder="127.0.0.1, 192.168.1.50, or https://your-tunnel.trycloudflare.com"
                 required
               />
+
+              {isAdmin && (
+                <div className="rounded-xl border border-slate-200/90 bg-slate-50/60 p-3.5 space-y-2">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800">
+                    <Globe className="h-3.5 w-3.5 text-indigo-600" />
+                    <span>Cloudflare Tunnel URL (Broadcast to All User Clients)</span>
+                  </div>
+                  <p className="text-[11px] text-muted leading-relaxed">
+                    Paste your active Cloudflare Tunnel URL here. The server will broadcast this to all user clients so they automatically reconnect when the tunnel restarts!
+                  </p>
+                  <Input
+                    name="remoteTunnelUrl"
+                    value={remoteTunnelUrl}
+                    onChange={(e) => setRemoteTunnelUrl(e.target.value)}
+                    placeholder="https://...trycloudflare.com"
+                  />
+                </div>
+              )}
 
               {!isUrlWithScheme && (
                 <Input

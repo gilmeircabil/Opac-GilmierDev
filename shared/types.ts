@@ -308,6 +308,7 @@ export interface ConnectionConfig {
   host: string
   port: number
   token?: string
+  remote_url?: string
 }
 
 export interface ConnectionStatus {
@@ -316,7 +317,31 @@ export interface ConnectionStatus {
   library_address?: string
   contact_info?: string
   api_version?: string
+  remote_url?: string
   error?: string
+}
+
+export interface DiscoveredServer {
+  host: string
+  port: number
+  library_name: string
+  api_version?: string
+  remote_url?: string
+  is_current?: boolean
+}
+
+export interface ConnectionDiscoveryResult {
+  found: boolean
+  servers: DiscoveredServer[]
+}
+
+export interface ConnectionStateEvent {
+  connected: boolean
+  reconnecting: boolean
+  host?: string
+  port?: number
+  remote_url?: string
+  library_name?: string
 }
 
 export interface ApiTokenInfo {

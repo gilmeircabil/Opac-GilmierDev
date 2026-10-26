@@ -14,6 +14,7 @@ interface PublicLayoutProps {
 export default function PublicLayout({ children, showBack = false }: PublicLayoutProps) {
   const settings = useAppStore((s) => s.settings)
   const mode = useAppStore((s) => s.mode)
+  const isReconnecting = useAppStore((s) => s.isReconnecting)
   const triggerRefresh = useAppStore((s) => s.triggerRefresh)
   const logo = imageUrl(settings.library_logo) || appLogo
   const location = useLocation()
@@ -96,6 +97,15 @@ export default function PublicLayout({ children, showBack = false }: PublicLayou
           </div>
         </div>
       </header>
+      {isUser && isReconnecting && (
+        <div className="border-b border-amber-200/90 bg-amber-50/90 px-4 py-1.5 text-center text-xs font-medium text-amber-900 flex items-center justify-center gap-2 backdrop-blur-sm animate-fade-in">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+          </span>
+          <span>Reconnecting to library server... Searching local network and Cloudflare tunnel automatically.</span>
+        </div>
+      )}
       <main className="flex-1">{children}</main>
       <ServerConnectionModal
         open={connOpen}

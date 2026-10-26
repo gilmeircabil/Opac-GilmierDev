@@ -184,9 +184,19 @@ export function buildAdminServices(
       database: databaseService,
       connection: {
         get: async () => connStore.get(),
-        save: async (config) => connStore.save(config),
+        save: async (config) => {
+          connStore.save(config)
+          if (config.remote_url !== undefined) {
+            network.setRemoteUrl(config.remote_url)
+          }
+        },
         test: async (config) => connStore.test(config),
-        reset: async () => connStore.reset()
+        reset: async () => connStore.reset(),
+        discover: async () => connStore.discover(),
+        setRemoteUrl: async (url) => {
+          connStore.setRemoteUrl(url)
+          network.setRemoteUrl(url)
+        }
       },
       isAuthenticated: () => auth.isAuthenticated(),
       openPath: async (path) => {

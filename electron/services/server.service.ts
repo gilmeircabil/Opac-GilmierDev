@@ -4,6 +4,7 @@ import { buildApiServer, API_VERSION } from '../api/server'
 import type { AdminConfig } from './config.service'
 import { logger } from '../utils/logger'
 import type { ServerStatus } from '@shared/types'
+import { createDiscoveryServer, type DiscoveryServer } from './discovery-server.service'
 
 export function lanAddresses(): string[] {
   const out: string[] = []
@@ -24,10 +25,12 @@ export interface NetworkService {
   stop(): Promise<void>
   restart(): Promise<ServerStatus>
   setPort(port: number): Promise<ServerStatus>
+  setRemoteUrl(url: string | null): void
 }
 
 interface ActiveServer {
   api: ApiServer
+  discovery: DiscoveryServer
 }
 
 export function networkService(
@@ -35,6 +38,7 @@ export function networkService(
   getConfig: () => AdminConfig
 ): NetworkService {
   let active: ActiveServer | null = null
+  let currentRemoteUrl: string | null = null
   const recentIps = new Map<string, number>()
 
   // Tracks requests per IP within a rolling window, used for the connected-user
@@ -47,7 +51,11 @@ export function networkService(
     }
   }
 
-  const getFullDeps = (): ApiServerDeps => ({ ...deps, onRequest })
+  const getFullDeps = (): ApiServerDeps => ({
+    ...deps,
+    getRemoteUrl: () => currentRemoteUrl,
+    onRequest
+  })
 
   async function buildLibrary(): Promise<string> {
     try {
@@ -83,15 +91,26 @@ export function networkService(
         logger.error('failed to start API server', err)
         throw new Error(`Could not start the server on port ${cfg.apiPort}. The port may already be in use.`)
       }
-      active = { api }
+
+      const discovery = createDiscoveryServer({
+        getLibraryName: deps.libraryName,
+        getApiPort: () => cfg.apiPort,
+        getRemoteUrl: () => currentRemoteUrl
+      })
+      await discovery.start().catch((err) => {
+        logger.warn('Discovery beacon start error', err)
+      })
+
+      active = { api, discovery }
       logger.info('API server started', { port: cfg.apiPort, apiVersion: API_VERSION })
       return this.status()
     },
     async stop(): Promise<void> {
       if (!active) return
-      const { api } = active
+      const { api, discovery } = active
       active = null
       recentIps.clear()
+      await discovery.stop().catch(() => undefined)
       await api.instance.close().catch((err) => {
         logger.error('error stopping API server', err)
       })
@@ -100,6 +119,12 @@ export function networkService(
     async restart(): Promise<ServerStatus> {
       await this.stop()
       return this.start()
+    },
+    setRemoteUrl(url: string | null): void {
+      currentRemoteUrl = url && url.trim() ? url.trim().replace(/\/+$/, '') : null
+      if (active?.discovery) {
+        active.discovery.setRemoteUrl(currentRemoteUrl)
+      }
     },
     async setPort(port: number): Promise<ServerStatus> {
       if (!Number.isInteger(port) || port < 1024 || port > 65535) {

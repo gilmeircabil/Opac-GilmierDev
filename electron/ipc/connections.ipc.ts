@@ -26,6 +26,8 @@ export function registerConnectionsIpc({ connection, isAuthenticated }: Services
     { context: ctx }
   )
   registerIpc(IPC.connectionReset, () => svc.reset(), { context: ctx })
+  registerIpc(IPC.connectionDiscover, () => svc.discover(), { context: ctx })
+  registerIpc(IPC.connectionSetRemoteUrl, (url: string | null) => svc.setRemoteUrl(url), { context: ctx })
 }
 
 function validateConfig(config: ConnectionConfig): void {

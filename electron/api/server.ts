@@ -20,6 +20,7 @@ export interface ApiServerDeps {
   libraryAddress: () => Promise<string>
   libraryContact: () => Promise<string>
   libraryLogo: () => Promise<string | null>
+  getRemoteUrl?: () => string | null
   onRequest: (ip: string) => void
 }
 
@@ -121,7 +122,8 @@ export async function buildApiServer(deps: ApiServerDeps): Promise<ApiServer> {
       deps.libraryContact(),
       deps.libraryLogo()
     ])
-    return { name, address, contact_info: contactInfo, logo, api_version: API_VERSION }
+    const remoteUrl = deps.getRemoteUrl ? deps.getRemoteUrl() : null
+    return { name, address, contact_info: contactInfo, logo, api_version: API_VERSION, remote_url: remoteUrl }
   })
 
   const qsFilters = (q: FastifyRequest['query']): BookFilters => {

@@ -16,6 +16,8 @@ import { migrateSqliteFrom } from './services/migrate-sqlite.service'
 import { configStore } from './services/config.service'
 import { apiBaseUrl } from './services/remote.client'
 import { firewallCommandFor } from './services/network-admin.service'
+import { createAutoReconnectService } from './services/auto-reconnect.service'
+import { IPC } from '@shared/api'
 
 const IMAGE_SCHEME = 'opac-img'
 
@@ -36,6 +38,7 @@ let mainWindow: BrowserWindow | null = null
 let backendServices: Services | null = null
 let adminMongo: MongoDb | null = null
 let getConnectionOverride: (() => ConnectionConfig | null) | null = null
+let userAutoReconnect: { start(): void; stop(): void } | null = null
 
 /** Restricts ipcMain.handle calls to the main frame of a real app window. */
 function enableIpcSenderValidation(): void {
@@ -279,6 +282,11 @@ async function bootstrapAdmin(): Promise<void> {
         tokenLabel: '',
         suggestedFirewallCommand: firewallCommandFor(cfgStore.get().apiPort)
       }
+    },
+    setRemoteUrl: (url: string | null) => {
+      if (backendServices?.network) {
+        backendServices.network.setRemoteUrl(url)
+      }
     }
   }
 
@@ -344,8 +352,15 @@ async function bootstrapUser(): Promise<void> {
   enableIpcSenderValidation()
   registerImageProtocol('user')
 
-  const { services, getConnection } = buildUserServices(dirs)
+  const { services, getConnection, store } = buildUserServices(dirs)
   getConnectionOverride = getConnection
+
+  userAutoReconnect = createAutoReconnectService(store, (event) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send(IPC.eventConnectionStatusChanged, event)
+    }
+  })
+  userAutoReconnect.start()
 
   services.network = {
     status: async () => ({
@@ -373,7 +388,8 @@ async function bootstrapUser(): Promise<void> {
       accessTokenConfigured: false,
       tokenLabel: '',
       suggestedFirewallCommand: ''
-    })
+    }),
+    setRemoteUrl: () => {}
   }
 
   registerAllIpc(services)
@@ -400,6 +416,10 @@ app.on('window-all-closed', () => {
 })
 
 app.on('before-quit', () => {
+  if (userAutoReconnect) {
+    userAutoReconnect.stop()
+    userAutoReconnect = null
+  }
   if (backendServices?.network) {
     backendServices.network.stop().catch((err: unknown) => logger.warn('network server stop error', err))
   }

@@ -11,6 +11,8 @@ import type {
   CategoryInput,
   ChangePasswordInput,
   ConnectionConfig,
+  ConnectionDiscoveryResult,
+  ConnectionStateEvent,
   CreateAdminInput,
   ImageResult,
   ImportTaskInput,
@@ -148,7 +150,9 @@ const api: LibraryApi = {
     reset: async () => {
       cachedBaseUrl = ''
       await invoke(IPC.connectionReset)
-    }
+    },
+    discover: () => invoke<ConnectionDiscoveryResult>(IPC.connectionDiscover),
+    setRemoteUrl: (url: string | null) => invoke(IPC.connectionSetRemoteUrl, url)
   },
 
   network: {
@@ -320,7 +324,12 @@ const api: LibraryApi = {
   onSettingsChanged: (cb: (settings: SettingsMap) => void) =>
     subscribe<SettingsMap>(IPC.eventSettingsChanged, cb),
   onSessionChanged: (cb: () => void) =>
-    subscribe<unknown>(IPC.eventSessionChanged, () => cb())
+    subscribe<unknown>(IPC.eventSessionChanged, () => cb()),
+  onConnectionStatusChanged: (cb: (event: ConnectionStateEvent) => void) =>
+    subscribe<ConnectionStateEvent>(IPC.eventConnectionStatusChanged, (e) => {
+      cachedBaseUrl = ''
+      cb(e)
+    })
 }
 
 contextBridge.exposeInMainWorld('api', api)

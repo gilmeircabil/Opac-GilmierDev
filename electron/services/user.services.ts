@@ -1,6 +1,6 @@
 import type { AppDirs } from '../config/paths'
 import type { Book, BookFilters, ConnectionConfig, ConnectionStatus, Paginated, SettingsMap } from '@shared/types'
-import { connectionStore } from './connection.service'
+import { connectionStore, type ConnectionStore } from './connection.service'
 import { remoteClient, fetchJson } from './remote.client'
 import type { RemoteEndpoint } from './remote.client'
 import type { Services } from '../ipc/types'
@@ -8,6 +8,7 @@ import type { Services } from '../ipc/types'
 export interface UserServicesResult {
   services: Services
   getConnection: () => ConnectionConfig | null
+  store: ConnectionStore
 }
 
 const NOT_AVAILABLE = 'This feature is only available on an Admin installation'
@@ -163,7 +164,9 @@ export function buildUserServices(appDirs: AppDirs): UserServicesResult {
       get: async () => store.get(),
       save: async (config) => store.save(config),
       test: async (config): Promise<ConnectionStatus> => store.test(config),
-      reset: async () => store.reset()
+      reset: async () => store.reset(),
+      discover: async () => store.discover(),
+      setRemoteUrl: async (url) => store.setRemoteUrl(url)
     },
     isAuthenticated: async () => false,
     openPath: async () => {
@@ -174,5 +177,5 @@ export function buildUserServices(appDirs: AppDirs): UserServicesResult {
     broadcastSession: () => undefined
   }
 
-  return { services, getConnection }
+  return { services, getConnection, store }
 }

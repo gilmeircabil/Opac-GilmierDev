@@ -17,6 +17,8 @@ import type {
   CategoryListItem,
   ChangePasswordInput,
   ConnectionConfig,
+  ConnectionDiscoveryResult,
+  ConnectionStateEvent,
   ConnectionStatus,
   CreateAdminInput,
   DashboardStats,
@@ -47,6 +49,9 @@ export const IPC = {
   connectionSave: 'connection:save',
   connectionTest: 'connection:test',
   connectionReset: 'connection:reset',
+  connectionDiscover: 'connection:discover',
+  connectionSetRemoteUrl: 'connection:set-remote-url',
+  eventConnectionStatusChanged: 'connection:status-changed',
 
   networkStatus: 'network:status',
   networkStart: 'network:start',
@@ -130,6 +135,8 @@ export interface LibraryApi {
     save(config: ConnectionConfig): Promise<void>
     test(config: ConnectionConfig): Promise<ConnectionStatus>
     reset(): Promise<void>
+    discover(): Promise<ConnectionDiscoveryResult>
+    setRemoteUrl(url: string | null): Promise<void>
   }
 
   network: {
@@ -223,4 +230,5 @@ export interface LibraryApi {
 
   onSettingsChanged(cb: (settings: SettingsMap) => void): () => void
   onSessionChanged(cb: () => void): () => void
+  onConnectionStatusChanged(cb: (event: ConnectionStateEvent) => void): () => void
 }

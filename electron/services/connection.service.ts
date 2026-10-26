@@ -1,9 +1,10 @@
 import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
-import type { ConnectionConfig, ConnectionStatus } from '@shared/types'
+import type { ConnectionConfig, ConnectionDiscoveryResult, ConnectionStatus } from '@shared/types'
 import { logger } from '../utils/logger'
 import { encryptSecret, decryptSecret } from '../utils/crypto'
 import { apiBaseUrl } from './remote.client'
+import { discoverAllServers } from './discovery-client.service'
 
 function connectionFilePath(userDataDir: string): string {
   return join(userDataDir, 'connection.json')
@@ -14,6 +15,8 @@ export interface ConnectionStore {
   save(config: ConnectionConfig): void
   reset(): void
   test(config: ConnectionConfig): Promise<ConnectionStatus>
+  discover(): Promise<ConnectionDiscoveryResult>
+  setRemoteUrl(url: string | null): void
 }
 
 function sanitizeHost(host: string): string {
@@ -30,13 +33,15 @@ export function connectionStore(userDataDir: string): ConnectionStore {
           host?: unknown
           port?: unknown
           token?: unknown
+          remote_url?: unknown
         }
         if (typeof raw.host !== 'string' || !raw.host.trim()) {
           return { host: '127.0.0.1', port: 47821 }
         }
         const port = typeof raw.port === 'number' && raw.port > 0 ? raw.port : 47821
         const token = typeof raw.token === 'string' && raw.token.trim() ? decryptSecret(raw.token) : undefined
-        return { host: sanitizeHost(raw.host), port, token }
+        const remote_url = typeof raw.remote_url === 'string' && raw.remote_url.trim() ? sanitizeHost(raw.remote_url) : undefined
+        return { host: sanitizeHost(raw.host), port, token, remote_url }
       } catch (err) {
         logger.error('failed to read connection configuration', err)
         return { host: '127.0.0.1', port: 47821 }
@@ -46,10 +51,11 @@ export function connectionStore(userDataDir: string): ConnectionStore {
       const clean: ConnectionConfig = {
         host: sanitizeHost(config.host),
         port: Number.isInteger(config.port) && config.port > 0 ? config.port : 47821,
-        token: config.token && config.token.trim() ? encryptSecret(config.token.trim()) : undefined
+        token: config.token && config.token.trim() ? encryptSecret(config.token.trim()) : undefined,
+        remote_url: config.remote_url && config.remote_url.trim() ? sanitizeHost(config.remote_url) : undefined
       }
       writeFileSync(connectionFilePath(userDataDir), JSON.stringify(clean, null, 2), 'utf8')
-      logger.info('connection configuration saved', { host: clean.host, port: clean.port })
+      logger.info('connection configuration saved', { host: clean.host, port: clean.port, remote_url: clean.remote_url })
     },
     reset(): void {
       try {
@@ -58,6 +64,15 @@ export function connectionStore(userDataDir: string): ConnectionStore {
         // no-op when not present
       }
       logger.info('connection configuration reset')
+    },
+    setRemoteUrl(url: string | null): void {
+      const current = this.get() || { host: '127.0.0.1', port: 47821 }
+      current.remote_url = url && url.trim() ? sanitizeHost(url) : undefined
+      this.save(current)
+    },
+    async discover(): Promise<ConnectionDiscoveryResult> {
+      const current = this.get()
+      return discoverAllServers(current?.port || 47821)
     },
     async test(config: ConnectionConfig): Promise<ConnectionStatus> {
       const host = sanitizeHost(config.host)
@@ -88,13 +103,15 @@ export function connectionStore(userDataDir: string): ConnectionStore {
           address?: string
           contact_info?: string
           api_version?: string
+          remote_url?: string
         }
         return {
           ok: true,
           library_name: data.name ?? 'OPAC Library',
           library_address: data.address ?? '',
           contact_info: data.contact_info ?? '',
-          api_version: data.api_version
+          api_version: data.api_version,
+          remote_url: data.remote_url
         }
       } catch (err) {
         const message =

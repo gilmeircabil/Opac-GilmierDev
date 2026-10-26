@@ -255,8 +255,8 @@ export default function Home() {
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <EmptyState
               icon={LibraryBig}
-              title="Connecting to Library..."
-              description="Waiting for the library server to respond. Retrying automatically..."
+              title="Connecting to Library Server..."
+              description="Scanning local network and waiting for the library server. All user terminals will reconnect automatically."
             />
             <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
               <button

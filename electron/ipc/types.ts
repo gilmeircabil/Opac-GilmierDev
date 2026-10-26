@@ -15,6 +15,7 @@ import type {
   CategoryInput,
   CategoryListItem,
   ConnectionConfig,
+  ConnectionDiscoveryResult,
   ConnectionStatus,
   DatabaseStatus,
   DashboardStats,
@@ -104,6 +105,8 @@ export interface ConnectionsService {
   save(config: ConnectionConfig): Promise<void>
   test(config: ConnectionConfig): Promise<ConnectionStatus>
   reset(): Promise<void>
+  discover(): Promise<ConnectionDiscoveryResult>
+  setRemoteUrl(url: string | null): Promise<void>
 }
 
 /**

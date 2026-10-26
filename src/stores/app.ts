@@ -8,6 +8,8 @@ interface AppState {
   mode: AppMode | null
   installInfo: InstallInfo | null
   connection: ConnectionConfig | null
+  isServerOnline: boolean
+  isReconnecting: boolean
   ready: boolean
   initialized: boolean
   refreshKey: number
@@ -17,6 +19,7 @@ interface AppState {
   setMode: (mode: AppMode) => void
   setInstallInfo: (info: InstallInfo) => void
   setConnection: (connection: ConnectionConfig | null) => void
+  setConnectionStatus: (status: { connected: boolean; reconnecting: boolean }) => void
   setReady: (ready: boolean) => void
   setInitialized: (value: boolean) => void
   triggerRefresh: () => void
@@ -37,6 +40,8 @@ export const useAppStore = create<AppState>((set) => ({
   mode: null,
   installInfo: null,
   connection: null,
+  isServerOnline: true,
+  isReconnecting: false,
   ready: false,
   initialized: false,
   refreshKey: 0,
@@ -46,6 +51,8 @@ export const useAppStore = create<AppState>((set) => ({
   setMode: (mode) => set({ mode }),
   setInstallInfo: (info) => set({ installInfo: info }),
   setConnection: (connection) => set({ connection }),
+  setConnectionStatus: ({ connected, reconnecting }) =>
+    set({ isServerOnline: connected, isReconnecting: reconnecting }),
   setReady: (ready) => set({ ready }),
   setInitialized: (value) => set({ initialized: value }),
   triggerRefresh: () => set((s) => ({ refreshKey: s.refreshKey + 1 }))
@@ -110,6 +117,28 @@ export async function bootstrapApp(): Promise<void> {
       if (next) {
         useAppStore.getState().setSettings(next)
         applyTheme(next.theme ?? 'light')
+      }
+    })
+
+    window.api.onConnectionStatusChanged?.((event) => {
+      const s = useAppStore.getState()
+      s.setConnectionStatus({
+        connected: event.connected,
+        reconnecting: event.reconnecting
+      })
+      if (event.connected) {
+        if (event.host && event.port) {
+          s.setConnection({
+            host: event.host,
+            port: event.port,
+            remote_url: event.remote_url
+          })
+        }
+        void window.api.settings.getAll().then((updated) => {
+          s.setSettings(updated)
+          applyTheme(updated.theme ?? 'light')
+        }).catch(() => undefined)
+        s.triggerRefresh()
       }
     })
     store.setInitialized(true)
