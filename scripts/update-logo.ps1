@@ -37,11 +37,6 @@ $bmp512.Save("src\assets\logo.png", [System.Drawing.Imaging.ImageFormat]::Png)
 $bmp512.Save("build\icon.png", [System.Drawing.Imaging.ImageFormat]::Png)
 $bmp512.Dispose()
 
-# Also save 1024x1024 to build/image.png for highest resolution
-$bmp1024 = Resize-Image $srcImg 1024 1024
-$bmp1024.Save("build\image.png", [System.Drawing.Imaging.ImageFormat]::Png)
-$bmp1024.Dispose()
-
 # 2. Build multi-resolution icon.ico with sizes: 256, 128, 64, 48, 32, 16
 $sizes = @(256, 128, 64, 48, 32, 16)
 $pngList = New-Object System.Collections.ArrayList
