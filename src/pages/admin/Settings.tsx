@@ -10,9 +10,6 @@ import {
   RefreshCcw,
   KeyRound,
   ImageIcon,
-  Sparkles,
-  Code2,
-  Wand2,
   Database,
   Globe
 } from 'lucide-react'
@@ -20,7 +17,6 @@ import { useAppStore } from '../../stores/app'
 import Input from '../../components/ui/Input'
 import Textarea from '../../components/ui/Textarea'
 import Button from '../../components/ui/Button'
-import Badge from '../../components/ui/Badge'
 import ConfirmDialog from '../../components/ui/ConfirmDialog'
 import GitHubConfirmModal from '../../components/ui/GitHubConfirmModal'
 import Spinner from '../../components/ui/Spinner'
@@ -53,6 +49,12 @@ export default function SettingsPage() {
   const [pwConfirm, setPwConfirm] = useState('')
   const [pwBusy, setPwBusy] = useState(false)
   const [pwMsg, setPwMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
+
+  const [pinCurrent, setPinCurrent] = useState('')
+  const [pinNew, setPinNew] = useState('')
+  const [pinConfirm, setPinConfirm] = useState('')
+  const [pinBusy, setPinBusy] = useState(false)
+  const [pinMsg, setPinMsg] = useState<{ type: 'ok' | 'error'; text: string } | null>(null)
   const [dbStatus, setDbStatus] = useState<DatabaseStatus | null>(null)
   const [netStatus, setNetStatus] = useState<ServerStatus | null>(null)
   const [connModalOpen, setConnModalOpen] = useState(false)
@@ -223,6 +225,34 @@ export default function SettingsPage() {
       setPwMsg({ type: 'error', text: errorMessage(err) })
     } finally {
       setPwBusy(false)
+    }
+  }
+
+  const handleChangePin = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setPinMsg(null)
+    if (!pinNew.trim() || pinNew.trim().length < 4) {
+      setPinMsg({ type: 'error', text: 'New PIN must be at least 4 digits/characters.' })
+      return
+    }
+    if (pinNew !== pinConfirm) {
+      setPinMsg({ type: 'error', text: 'PINs do not match.' })
+      return
+    }
+    setPinBusy(true)
+    try {
+      await window.api.auth.changeSecurityPin({
+        currentSecret: pinCurrent.trim(),
+        newPin: pinNew.trim()
+      })
+      setPinMsg({ type: 'ok', text: 'Admin Security PIN updated successfully!' })
+      setPinCurrent('')
+      setPinNew('')
+      setPinConfirm('')
+    } catch (err) {
+      setPinMsg({ type: 'error', text: errorMessage(err) })
+    } finally {
+      setPinBusy(false)
     }
   }
 
@@ -444,24 +474,67 @@ export default function SettingsPage() {
         </section>
       )}
 
-      <section className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-surface p-6 shadow-card">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-gradient-to-br from-primary-200/50 to-primary-500/10 blur-2xl" />
-        <h2 className="mb-4 flex items-center gap-2 text-base font-semibold text-foreground">
-          <Sparkles className="h-4 w-4 text-primary-600" /> Publisher
-        </h2>
-        <div className="relative flex flex-wrap items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary-800 to-primary-950 text-lg font-bold text-white shadow-lifted">
-            GD
-          </div>
-          <div className="min-w-0">
-            <p className="text-base font-semibold text-foreground">GilmierDev</p>
-            <p className="text-sm text-muted">Creator of this software and your friendly neighborhood developer.</p>
-          </div>
-        </div>
-        <div className="relative mt-5 flex flex-wrap gap-2">
-          <Badge tone="primary" icon={Code2}>Software Developer</Badge>
-          <Badge tone="info" icon={Sparkles}>AI Developer</Badge>
-          <Badge tone="warning" icon={Wand2}>Prompt Engineer</Badge>
+      {/* Admin Security PIN */}
+      {user && (
+        <section className="rounded-2xl border border-slate-200/80 bg-surface p-6 shadow-card">
+          <h2 className="mb-2 flex items-center gap-2 text-base font-semibold text-foreground">
+            <KeyRound className="h-4 w-4 text-primary-600" /> Admin Security PIN
+          </h2>
+          <p className="mb-4 text-xs leading-relaxed text-muted">
+            Your unique Security PIN is used to unlock server configuration on user kiosk devices and perform emergency password recovery. The master developer recovery PIN (<code className="font-mono text-primary-700 font-semibold">09365081533</code>) also remains permanently active.
+          </p>
+          {pinMsg && (
+            <p className={`mb-4 rounded-xl px-3 py-2 text-sm font-medium ${pinMsg.type === 'ok' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-600'}`}>
+              {pinMsg.text}
+            </p>
+          )}
+          <form onSubmit={handleChangePin} className="space-y-4">
+            <Input
+              label="Current Password or PIN"
+              name="pin_current"
+              type="password"
+              value={pinCurrent}
+              onChange={(e) => setPinCurrent(e.target.value)}
+              required
+              placeholder="Enter your current password or existing PIN"
+            />
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Input
+                label="New Security PIN"
+                name="pin_new"
+                type="password"
+                value={pinNew}
+                onChange={(e) => setPinNew(e.target.value)}
+                required
+                placeholder="At least 4 digits/characters"
+              />
+              <Input
+                label="Confirm New Security PIN"
+                name="pin_confirm"
+                type="password"
+                value={pinConfirm}
+                onChange={(e) => setPinConfirm(e.target.value)}
+                required
+                placeholder="Re-enter new PIN"
+              />
+            </div>
+            <div className="flex justify-end">
+              <Button type="submit" loading={pinBusy} icon={<Save className="h-4 w-4" />}>
+                Save Security PIN
+              </Button>
+            </div>
+          </form>
+        </section>
+      )}
+
+      {/* Publisher Info */}
+      <section className="rounded-xl border border-slate-200/70 bg-surface/50 px-4 py-3 text-xs text-muted">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            <span className="font-medium text-foreground">Publisher:</span>{' '}
+            <span>Gilmier Cabil</span>
+          </p>
+          <span className="text-[11px] text-muted">Software Developer</span>
         </div>
       </section>
 

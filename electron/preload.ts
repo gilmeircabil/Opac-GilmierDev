@@ -220,7 +220,14 @@ const api: LibraryApi = {
       fetchAdmin<{ username: string }>('/auth/recover', {
         method: 'POST',
         body: JSON.stringify(input)
-      })
+      }),
+    verifyPin: (pin: string) =>
+      fetchAdmin<boolean>('/auth/verify-pin', {
+        method: 'POST',
+        body: JSON.stringify({ pin })
+      }),
+    changeSecurityPin: (input: { currentSecret: string; newPin: string }) =>
+      fetchRpc('auth', 'changeSecurityPin', input.currentSecret, input.newPin)
   },
 
   books: {

@@ -38,7 +38,7 @@ export default function BookDetails() {
   }, [id])
 
   return (
-    <PublicLayout showBack>
+    <PublicLayout>
       <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
         {loading ? (
           <Spinner label="Loading book details..." full />

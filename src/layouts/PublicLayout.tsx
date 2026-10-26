@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Lock, X, BookMarked, RefreshCw, Server, Library } from 'lucide-react'
+import { Lock, X, BookMarked, RefreshCw, Server } from 'lucide-react'
 import { useAppStore } from '../stores/app'
 import { imageUrl } from '../lib/utils'
 import ServerConnectionModal from '../components/ServerConnectionModal'
@@ -104,10 +104,9 @@ export default function PublicLayout({ children, showBack = false }: PublicLayou
         onConnected={() => void handleRefresh()}
       />
       {isUser && (
-        <footer className="border-t border-slate-200/80 bg-white">
-          <p className="mx-auto flex max-w-7xl items-center justify-center gap-2 px-4 py-4 text-center text-xs text-muted sm:px-6">
-            <Library className="h-3.5 w-3.5 text-indigo-500" />
-            © 2026 GilmierDev · Powered by OPAC Library System
+        <footer className="border-t border-slate-200/60 bg-white/40 py-2.5 text-center text-[11px] text-muted">
+          <p className="mx-auto max-w-7xl px-4 sm:px-6">
+            © 2026 Gilmier Cabil · OPAC Library System
           </p>
         </footer>
       )}

@@ -115,7 +115,18 @@ export default function ServerConnectionModal({
         return
       }
 
-      // 2. Check admin password against backend (if online)
+      // 2. Check custom Admin Security PIN via backend
+      try {
+        const isValidPin = await window.api.auth.verifyPin(secret)
+        if (isValidPin) {
+          setIsAuthorized(true)
+          return
+        }
+      } catch {
+        // Backend might be offline or still pointing to previous IP
+      }
+
+      // 3. Check admin password against backend (if online)
       try {
         await window.api.auth.login('admin', secret)
         setIsAuthorized(true)
@@ -124,9 +135,9 @@ export default function ServerConnectionModal({
         // failed online login
       }
 
-      setAuthError('Access denied. Incorrect administrator password or recovery PIN.')
+      setAuthError('Access denied. Incorrect administrator password or PIN.')
     } catch {
-      setAuthError('Access denied. Incorrect administrator password or recovery PIN.')
+      setAuthError('Access denied. Incorrect administrator password or PIN.')
     } finally {
       setAuthBusy(false)
     }

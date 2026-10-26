@@ -159,6 +159,8 @@ export interface LibraryApi {
     session(): Promise<AdminUser | null>
     changePassword(input: ChangePasswordInput): Promise<void>
     recoverPassword(input: { pin: string; newPassword: string; username?: string }): Promise<{ username: string }>
+    verifyPin(pin: string): Promise<boolean>
+    changeSecurityPin(input: { currentSecret: string; newPin: string }): Promise<void>
   }
 
   books: {

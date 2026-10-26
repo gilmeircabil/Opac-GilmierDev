@@ -223,6 +223,7 @@ export interface CreateAdminInput {
   username: string
   password: string
   full_name?: string | null
+  security_pin?: string | null
 }
 
 export interface ChangePasswordInput {

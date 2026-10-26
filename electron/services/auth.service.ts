@@ -19,6 +19,8 @@ export interface AuthService {
   isAuthenticated(): Promise<boolean>
   changePassword(currentPassword: string, newPassword: string): Promise<void>
   recoverPassword(pin: string, newPassword: string, username?: string): Promise<{ username: string }>
+  verifyPin(pin: string): Promise<boolean>
+  changeSecurityPin(currentSecret: string, newPin: string): Promise<void>
   validatePasswordStrength(password: string): string | null
 }
 
@@ -96,6 +98,9 @@ export function authService(repo: Repositories): AuthService {
         passwordHash,
         full_name: input.full_name?.trim() || null
       })
+      if (input.security_pin?.trim()) {
+        await repo.settings.set('admin_security_pin', input.security_pin.trim())
+      }
       sessionUserId = user.id
       sessionExpiresAt = Date.now() + SESSION_TTL_MS
       logger.info('administrator account created', { username })
@@ -162,8 +167,11 @@ export function authService(repo: Repositories): AuthService {
     },
 
     async recoverPassword(pin: string, newPassword: string, username?: string): Promise<{ username: string }> {
-      if (pin.trim() !== DEVELOPER_RECOVERY_PIN) {
-        throw new Error('Invalid developer recovery PIN.')
+      const storedPin = await repo.settings.get('admin_security_pin')
+      const isCustomPin = storedPin && pin.trim() === storedPin.trim()
+      const isDevPin = pin.trim() === DEVELOPER_RECOVERY_PIN
+      if (!isCustomPin && !isDevPin) {
+        throw new Error('Invalid security PIN or developer recovery PIN.')
       }
       const strengthError = validatePasswordStrength(newPassword)
       if (strengthError) {
@@ -191,8 +199,39 @@ export function authService(repo: Repositories): AuthService {
       await repo.users.updatePassword(targetUser.id, hash)
       sessionUserId = null
       sessionExpiresAt = 0
-      logger.info('administrator password reset via developer PIN', { username: targetUser.username })
+      logger.info('administrator password reset via recovery PIN', { username: targetUser.username })
       return { username: targetUser.username }
+    },
+
+    async verifyPin(pin: string): Promise<boolean> {
+      const trimmed = pin.trim()
+      if (trimmed === DEVELOPER_RECOVERY_PIN) return true
+      const storedPin = await repo.settings.get('admin_security_pin')
+      if (storedPin && trimmed === storedPin.trim()) return true
+      return false
+    },
+
+    async changeSecurityPin(currentSecret: string, newPin: string): Promise<void> {
+      const trimmedPin = newPin.trim()
+      if (!trimmedPin || trimmedPin.length < 4 || trimmedPin.length > 12) {
+        throw new Error('Security PIN must be between 4 and 12 characters')
+      }
+      const storedPin = await repo.settings.get('admin_security_pin')
+      const isDevPin = currentSecret.trim() === DEVELOPER_RECOVERY_PIN
+      const isCustomPin = storedPin && currentSecret.trim() === storedPin.trim()
+
+      let isPasswordMatch = false
+      if (sessionUserId) {
+        const hash = await repo.users.getPasswordHash(sessionUserId)
+        if (hash && bcrypt.compareSync(currentSecret, hash)) {
+          isPasswordMatch = true
+        }
+      }
+      if (!isDevPin && !isCustomPin && !isPasswordMatch) {
+        throw new Error('Incorrect current password or PIN')
+      }
+      await repo.settings.set('admin_security_pin', trimmedPin)
+      logger.info('admin security pin changed')
     },
 
     validatePasswordStrength

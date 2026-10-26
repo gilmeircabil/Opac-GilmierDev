@@ -28,6 +28,7 @@ export default function Login() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [securityPin, setSecurityPin] = useState('')
   const [fullName, setFullName] = useState('')
   const [showPass, setShowPass] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -75,7 +76,16 @@ export default function Login() {
           setError('Passwords do not match.')
           return
         }
-        const user = await window.api.auth.setup({ username, password, full_name: fullName || null })
+        if (!securityPin.trim() || securityPin.trim().length < 4) {
+          setError('Admin Security PIN must be at least 4 digits/characters.')
+          return
+        }
+        const user = await window.api.auth.setup({
+          username,
+          password,
+          full_name: fullName || null,
+          security_pin: securityPin.trim()
+        })
         useAppStore.getState().setUser(user)
       } else {
         const user = await window.api.auth.login(username, password)
@@ -218,16 +228,33 @@ export default function Login() {
             </div>
           )}
           {mode === 'setup' && (
-            <Input
-              label="Confirm Password"
-              name="confirm"
-              type={showPass ? 'text' : 'password'}
-              value={confirm}
-              onChange={(e) => setConfirm(e.target.value)}
-              placeholder="Re-enter password"
-              required
-              autoComplete="new-password"
-            />
+            <>
+              <Input
+                label="Confirm Password"
+                name="confirm"
+                type={showPass ? 'text' : 'password'}
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                placeholder="Re-enter password"
+                required
+                autoComplete="new-password"
+              />
+              <div>
+                <Input
+                  label="Admin Security PIN *"
+                  name="securityPin"
+                  type="password"
+                  value={securityPin}
+                  onChange={(e) => setSecurityPin(e.target.value)}
+                  placeholder="e.g. 1234 or 2026 (4–12 characters)"
+                  required
+                  icon={<KeyRound className="h-4 w-4" />}
+                />
+                <p className="mt-1 text-[11px] text-muted">
+                  A unique PIN created by you to authorize server connection changes and recover your password.
+                </p>
+              </div>
+            </>
           )}
 
           {error && (
@@ -271,20 +298,20 @@ export default function Login() {
           <form onSubmit={handleRecoverPassword} className="space-y-4">
             <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-3.5 text-xs text-primary-800">
               <p className="font-semibold flex items-center gap-1.5">
-                <Key className="h-4 w-4 text-primary-600" /> Developer Emergency Recovery
+                <Key className="h-4 w-4 text-primary-600" /> Account Password Recovery
               </p>
               <p className="mt-1 text-muted">
-                Enter your configured Developer Recovery PIN to verify authorized access and set a new password.
+                Enter your Admin Security PIN or Master Developer Recovery PIN to verify authorized access and set a new password.
               </p>
             </div>
 
             <Input
-              label="Developer PIN *"
+              label="Security PIN or Developer PIN *"
               name="pin"
               type="password"
               value={pin}
               onChange={(e) => setPin(e.target.value)}
-              placeholder="Enter developer PIN"
+              placeholder="Enter your security PIN or developer PIN"
               required
               autoFocus
             />

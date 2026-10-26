@@ -21,6 +21,7 @@ export function adminRoutes(fastify: FastifyInstance, deps: AdminRoutesDeps) {
     if (url === '/api/v1/admin/auth/needs-setup') return
     if (url === '/api/v1/admin/auth/setup') return
     if (url === '/api/v1/admin/auth/recover') return
+    if (url === '/api/v1/admin/auth/verify-pin') return
     if (url === '/api/v1/admin/auth/session') return
 
     const authHeader = request.headers.authorization
@@ -83,6 +84,17 @@ export function adminRoutes(fastify: FastifyInstance, deps: AdminRoutesDeps) {
       if (!services.auth) throw new Error('Auth service unavailable')
       const result = await services.auth.recoverPassword(pin, newPassword, username)
       return { ok: true, data: result }
+    } catch (e: any) {
+      return { ok: false, error: e.message }
+    }
+  })
+
+  fastify.post('/api/v1/admin/auth/verify-pin', async (request) => {
+    try {
+      const { pin } = request.body as { pin: string }
+      if (!services.auth) throw new Error('Auth service unavailable')
+      const valid = await services.auth.verifyPin(pin ?? '')
+      return { ok: true, data: valid }
     } catch (e: any) {
       return { ok: false, error: e.message }
     }
