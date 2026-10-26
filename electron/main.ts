@@ -15,6 +15,7 @@ import { buildUserServices } from './services/user.services'
 import { migrateSqliteFrom } from './services/migrate-sqlite.service'
 import { configStore } from './services/config.service'
 import { apiBaseUrl } from './services/remote.client'
+import { firewallCommandFor } from './services/network-admin.service'
 
 const IMAGE_SCHEME = 'opac-img'
 
@@ -276,7 +277,7 @@ async function bootstrapAdmin(): Promise<void> {
       return {
         accessTokenConfigured: false,
         tokenLabel: '',
-        suggestedFirewallCommand: `netsh advfirewall firewall add rule name="OPAC Library API" dir=in action=allow protocol=TCP localport=${cfgStore.get().apiPort} profile=private`
+        suggestedFirewallCommand: firewallCommandFor(cfgStore.get().apiPort)
       }
     }
   }

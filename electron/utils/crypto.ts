@@ -11,7 +11,7 @@ const ENC_PREFIX = 'enc:'
  * plaintext form with a warning instead of failing at startup.
  */
 
-export function encryptionAvailable(): boolean {
+function encryptionAvailable(): boolean {
   try {
     return safeStorage.isEncryptionAvailable()
   } catch {
@@ -19,7 +19,7 @@ export function encryptionAvailable(): boolean {
   }
 }
 
-export function isEncrypted(value: string): boolean {
+function isEncrypted(value: string): boolean {
   return value.startsWith(ENC_PREFIX)
 }
 

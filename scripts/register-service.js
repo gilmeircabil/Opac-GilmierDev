@@ -3,7 +3,6 @@ const path = require('path');
 
 // Identify the main Electron executable
 const execPath = process.execPath;
-let scriptPath = execPath;
 
 // If running from source, use electron executable
 if (!execPath.toLowerCase().endsWith('opaclibrary.exe')) {

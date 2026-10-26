@@ -5,7 +5,7 @@ import { platform } from 'node:os'
 import type { AppMode } from '@shared/types'
 import { logger } from '../utils/logger'
 
-export interface InstallConfig {
+interface InstallConfig {
   mode: AppMode
   installedVersion: string | null
 }
@@ -61,12 +61,4 @@ export function getAppMode(): AppMode {
   if (envMode) return envMode
   const install = readInstallConfig()
   return install?.mode ?? 'admin'
-}
-
-export function getInstallConfig(): InstallConfig | null {
-  return readInstallConfig()
-}
-
-export function installConfigFilePath(): string {
-  return INSTALL_FILE()
 }

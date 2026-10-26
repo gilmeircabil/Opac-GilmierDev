@@ -5,7 +5,7 @@ import { logger } from '../utils/logger'
 import { encryptSecret, decryptSecret } from '../utils/crypto'
 import { apiBaseUrl } from './remote.client'
 
-export function connectionFilePath(userDataDir: string): string {
+function connectionFilePath(userDataDir: string): string {
   return join(userDataDir, 'connection.json')
 }
 
@@ -17,11 +17,7 @@ export interface ConnectionStore {
 }
 
 function sanitizeHost(host: string): string {
-  const trimmed = host.trim().replace(/\/+$/, '')
-  if (/^https?:\/\//i.test(trimmed)) {
-    return trimmed
-  }
-  return trimmed.replace(/^https?:\/\//i, '')
+  return host.trim().replace(/\/+$/, '')
 }
 
 export function connectionStore(userDataDir: string): ConnectionStore {

@@ -1,7 +1,7 @@
 import { app } from 'electron'
 import { join, sep } from 'node:path'
 import { mkdirSync } from 'node:fs'
-import { homedir, platform } from 'node:os'
+import { platform } from 'node:os'
 
 export interface AppDirs {
   userData: string
@@ -21,7 +21,7 @@ export interface SystemDirs {
   configFile: string
 }
 
-export function machineDataRoot(): string {
+function machineDataRoot(): string {
   if (platform() === 'win32') {
     const programData = process.env.PROGRAMDATA ?? 'C:\\ProgramData'
     return join(programData, 'OpacLibrarySystem')
@@ -81,10 +81,6 @@ export function ensureSystemDirs(dirs: SystemDirs): void {
   }
 }
 
-export function backslashToWindows(p: string): string {
-  return p.replaceAll('/', '\\')
-}
-
 /** True when `candidate` is `parent` itself or lives inside `parent`. */
 export function isPathWithin(parent: string, candidate: string): boolean {
   const resolvedParent = join(parent)
@@ -108,8 +104,4 @@ export function resolveImagePath(imagesDir: string, filename: string): string {
     throw new Error('Invalid image filename')
   }
   return join(imagesDir, base)
-}
-
-export function homeDir(): string {
-  return homedir()
 }

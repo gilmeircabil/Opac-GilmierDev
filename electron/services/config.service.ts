@@ -11,7 +11,7 @@ export interface AdminConfig {
   mongoDbName: string
 }
 
-export function defaultAdminConfig(): AdminConfig {
+function defaultAdminConfig(): AdminConfig {
   return {
     apiPort: 47821,
     serverEnabled: true,
@@ -25,7 +25,7 @@ function isInRange(port: number): boolean {
   return Number.isInteger(port) && port >= 1024 && port <= 65535
 }
 
-export function loadAdminConfig(configFile: string): AdminConfig {
+function loadAdminConfig(configFile: string): AdminConfig {
   const cfg = defaultAdminConfig()
   try {
     if (existsSync(configFile)) {
@@ -53,7 +53,7 @@ export function loadAdminConfig(configFile: string): AdminConfig {
   return cfg
 }
 
-export function saveAdminConfig(configFile: string, cfg: AdminConfig): void {
+function saveAdminConfig(configFile: string, cfg: AdminConfig): void {
   const data = {
     apiPort: cfg.apiPort,
     serverEnabled: cfg.serverEnabled,
