@@ -13,8 +13,7 @@ import {
   ShieldCheck
 } from 'lucide-react'
 import { useAppStore } from '../stores/app'
-import { classNames, imageUrl, errorMessage } from '../lib/utils'
-import appLogo from '../assets/logo.png'
+import { classNames, errorMessage } from '../lib/utils'
 
 const NAV: { label: string; items: { to: string; label: string; icon: React.ElementType; end: boolean }[] }[] = [
   {
@@ -44,7 +43,6 @@ export default function AdminLayout() {
   const navigate = useNavigate()
   const user = useAppStore((s) => s.user)
   const settings = useAppStore((s) => s.settings)
-  const logo = imageUrl(settings.library_logo) || appLogo
 
   useEffect(() => {
     if (!user) {
@@ -71,17 +69,10 @@ export default function AdminLayout() {
       <aside className="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200/80 bg-white shadow-sm">
         <Link
           to="/"
-          className="ring-focus flex items-center gap-3 border-b border-slate-100 bg-gradient-to-br from-indigo-50/50 to-transparent px-5 py-4.5 transition-colors hover:bg-slate-50/80"
+          className="ring-focus flex flex-col justify-center border-b border-slate-100 bg-gradient-to-br from-indigo-50/40 to-transparent px-5 py-4.5 transition-colors hover:bg-slate-50/80"
         >
-          <img
-            src={logo}
-            alt="Library logo"
-            className="h-10 w-10 rounded-xl object-cover shadow-sm ring-1 ring-slate-200/80"
-          />
-          <span className="flex min-w-0 flex-col leading-tight">
-            <span className="truncate text-sm font-bold text-slate-900 tracking-tight">{settings.library_name}</span>
-            <span className="text-[11px] font-medium text-indigo-700">Admin Console</span>
-          </span>
+          <span className="truncate text-base font-bold text-slate-900 tracking-tight">{settings.library_name}</span>
+          <span className="mt-0.5 text-xs font-semibold text-indigo-700">Admin Console</span>
         </Link>
 
         <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4 scrollbar-thin">
