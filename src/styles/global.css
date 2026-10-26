@@ -66,20 +66,6 @@ body {
   color: #1e1b4b;
 }
 
-/* Consistent card primitive */
-.card {
-  background-color: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: 1rem;
-  box-shadow: var(--shadow-card);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-}
-
-.surface {
-  background-color: var(--c-surface);
-  border-color: var(--c-border);
-}
-
 .text-muted {
   color: var(--c-muted);
 }
