@@ -4,7 +4,7 @@ import type { Borrowing, BorrowingFilters, BorrowingInput, Paginated } from '@sh
 import type { BorrowingsRepository } from '../../repositories.types'
 import type { BookDoc } from './books.repository'
 
-export interface BorrowingDoc {
+interface BorrowingDoc {
   id: number
   book_id: number
   borrower_name: string

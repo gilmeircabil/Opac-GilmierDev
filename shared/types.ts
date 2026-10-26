@@ -319,14 +319,6 @@ export interface ConnectionStatus {
   error?: string
 }
 
-export interface PublicLibraryInfo {
-  name: string
-  logo: string | null
-  address: string
-  contact_info: string
-  api_version: string
-}
-
 export interface ApiTokenInfo {
   configured: boolean
   label: string
